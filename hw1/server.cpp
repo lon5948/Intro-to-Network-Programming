@@ -1,4 +1,4 @@
-#include <stdio.h>  
+#include <iostream>  
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -17,14 +17,14 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in clientAddr; 
     int client_socket;  
 
-    // check command format of connecting to server
+    // check command format 
     const char* s = "./server";
     try {
-        serverPort = atoi(argv[1]);
-        if (argc!=2 || strcmp(argv[1],s)) {
+        if (argc!=2 || strcmp(argv[0],s)) {
             cout << "Usage: ./server <server port>" << endl;
             return 0;
         }
+        serverPort = atoi(argv[1]);
     }
     catch (const exception& e) {
         cerr << e.what() << endl;
