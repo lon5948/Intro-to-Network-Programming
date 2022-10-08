@@ -1,4 +1,6 @@
 #include <iostream>  
+#include <vector>
+#include <cstring>
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -6,6 +8,30 @@
 #include <arpa/inet.h>  
 
 using namespace std;
+
+vector<string> split(str) {
+
+    vector<string> result;
+    stringstream ss(str);
+    string token;
+
+    while (getline(ss,token,' ')) {
+        result.push_back(token);
+    }
+    return result;
+}
+
+void Exit(int TCP_socket,int UDP_socket) {
+    char message[] = { "exit" };
+
+    int err = send(TCP_socket,message,sizeof(message),0);
+    if (err == -1) {
+        cout << "Error: Fail to send message to the server." << endl;
+    }
+    //logout first
+    close(TCP_socket);
+    close(UDP_socket);
+}
 
 int main(int argc, char* argv[]) {
 
@@ -58,10 +84,17 @@ int main(int argc, char* argv[]) {
         cout << "*****Welcome to Game 1A2B*****" << endl;
     }
     
-    string command = "";
+    string commandInput = "";
+    string
+    vector<string> command;
 
-    while(getline(cin, command)) {
+    while (getline(cin, commandInput)) {
+        command = split(commandInput);
         
+        if (command[0] == "exit") {
+            Exit(TCP_socket,UDP_socket);
+            return 0;
+        }
     }
 
     return 0;

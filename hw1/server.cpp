@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
-    while(1) {
+    while (1) {
         // accept a new connection and get a new socket for subsequent data transmissions   
         client_socket = accept(TCP_socket, (struct sockaddr*) &clientAddr, &sizeof(clientAddr));  
         cout << "New connection." << endl;
