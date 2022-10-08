@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
     int TCP_socket,UDP_socket;  
     struct sockaddr_in serverAddr;  
     struct sockaddr_in clientAddr; 
-    int client_socket;  
+    int connect_socket;  
 
     // check command format 
     const char* s = "./server";
@@ -69,13 +69,26 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
+    char buffer[256] = {};
+    int pid;
+
     while (1) {
         // accept a new connection and get a new socket for subsequent data transmissions   
-        client_socket = accept(TCP_socket, (struct sockaddr*) &clientAddr, &sizeof(clientAddr));  
+        connect_socket = accept(TCP_socket, (struct sockaddr*) &clientAddr, &sizeof(clientAddr));  
         cout << "New connection." << endl;
         
+        pid = fork();
+        if (pid == 0) {
+            // TCP_socket -> connect_socket
+            close(TCP_socket);
+
+            while (1) {
+                FD_SET(connect_socket, &rset);
+                FD_SET(UDP_socket, &rset);
+            }
+        }
         // close the socket   
-        close(client_socket);   
+        close(connect_socket);   
         close(UDP_socket);  
         return 0; 
     }

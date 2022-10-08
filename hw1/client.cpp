@@ -1,6 +1,7 @@
 #include <iostream>  
 #include <vector>
 #include <cstring>
+#include <string>
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -9,7 +10,7 @@
 
 using namespace std;
 
-vector<string> split(str) {
+vector<string> split(string str) {
 
     vector<string> result;
     stringstream ss(str);
@@ -21,16 +22,42 @@ vector<string> split(str) {
     return result;
 }
 
-void Exit(int TCP_socket,int UDP_socket) {
-    char message[] = { "exit" };
+void Exit(int TCP_socket, int UDP_socket) {
+    char sendMessage[] = { "exit" };
 
-    int err = send(TCP_socket,message,sizeof(message),0);
-    if (err == -1) {
+    int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
+    if (errS == -1) {
         cout << "Error: Fail to send message to the server." << endl;
     }
     //logout first
     close(TCP_socket);
     close(UDP_socket);
+}
+
+void Register(int UDP_socket, string commandInput, struct sockaddr_in &serverAddr) {
+    len = commandInput.length();
+    char sendMessage[len] = {};
+    char receiveMessage[128] = {};
+    commandInput.copy(sendMessage,len);
+
+    int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+    if (errS == -1) {
+        cout << "Error: Fail to send message to the server." << endl;
+    }
+
+    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+    if (errR == -1) {
+        cout << "Error: Fail to receive message from the server." << endl;
+    }
+    else if (receiveMessage == "Success") {
+        cout << "Register successfully." << endl;
+    }
+    else if (receiveMessage == "Fail1") {
+        cout << "Username is already used." << endl;
+    }
+    else if (receiveMessage == "Fail2") {
+        cout << "Email is already used." << endl;
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -43,7 +70,7 @@ int main(int argc, char* argv[]) {
     // check command format  
     const char* s = "./client";
     try {
-        if (argc!=3 || strcmp(argv[0],s)) {
+        if (argc!=3 || strcmp(argv[0], s)) {
             cout << "Usage: ./client <server IP> <server port>" << endl;
             return 0;
         }
@@ -69,7 +96,7 @@ int main(int argc, char* argv[]) {
     } 
 
     // set the socket  
-    bzero(&serverAddr,sizeof(serverAddr));
+    bzero(&serverAddr, izeof(serverAddr));
     serverAddr.sin_family = AF_INET;  
     serverAddr.sin_port = htons(serverPort);  
     serverAddr.sin_addr.s_addr = inet_addr(serverIP); 
@@ -92,8 +119,16 @@ int main(int argc, char* argv[]) {
         command = split(commandInput);
         
         if (command[0] == "exit") {
-            Exit(TCP_socket,UDP_socket);
+            Exit(TCP_socket, UDP_socket);
             return 0;
+        }
+        else if (command[0] == "register") {
+            if (command.size() != 4){
+                cout<<"Usage: register <username> <email> <password>"<<endl;
+            }
+            else {
+                Register();
+            }
         }
     }
 
