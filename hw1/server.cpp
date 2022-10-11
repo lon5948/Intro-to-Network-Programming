@@ -370,7 +370,7 @@ int main(int argc, char* argv[]) {
     int nfds = max(TCP_socket, UDP_socket) + 1;
     int newClient;
     struct sockaddr_in clientAddr;
-    int clientAddrLen = sizeof(clientAddr);
+    socklen_t clientAddrLen = sizeof(clientAddr);
     char receiveMessage[512] = {};
     vector<string> recVec;
     pthread_t pid;
