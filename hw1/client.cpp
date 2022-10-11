@@ -2,6 +2,7 @@
 #include <vector>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -49,13 +50,14 @@ void Register(int UDP_socket, string commandInput, struct sockaddr_in &serverAdd
     char sendMessage[512] = {};
     commandInput.copy(sendMessage, len);
     char receiveMessage[512] = {};
+    socklen_t serverAddrLen = sizeof(serverAddr); 
 
     int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
     if (errS == -1) {
         cout << "[Error] Fail to send message to the server." << endl;
     }
 
-    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, &serverAddrLen);
     if (errR == -1) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
@@ -105,41 +107,19 @@ void Logout(int TCP_socket) {
 void Rule(int UDP_socket, struct sockaddr_in &serverAddr) {
     char sendMessage[] = { "game-rule" };
     char receiveMessage[512] = {};
+    socklen_t serverAddrLen = sizeof(serverAddr); 
 
     int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
     if (errS == -1) {
         cout << "[Error] Fail to send message to the server." << endl;
     }
 
-    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, &serverAddrLen);
     if (errR == -1) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
     else {
         cout << receiveMessage << endl;
-    }
-}
-
-void Start(int TCP_socket, string commandInput) {
-    int len = commandInput.length();
-    char sendMessage[512] = {};
-    commandInput.copy(sendMessage, len);
-    char receiveMessage[128] = {};
-
-    int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
-    if (errS == -1) {
-        cout << "[Error] Fail to send message to the server." << endl;
-    }
-
-    int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
-    if (errR == -1) {
-        cout << "[Error] Fail to receive message from the server." << endl;
-    }
-    else {
-        cout << receiveMessage << endl;
-        if (receiveMessage == "Please typing a 4-digit number:") {
-            Game(TCP_socket);
-        }
     }
 }
 
@@ -163,10 +143,33 @@ void Game(int TCP_socket) {
         else {
             cout << receiveMessage << endl;
             char substr[19];
-            strncpy_s(substr, receiveMessage + 5, 18);
+            strncpy(substr, receiveMessage + 5, 18);
             if (receiveMessage == "You got the answer!" || substr == "You lose the game!") {
                 break;
             }
+        }
+    }
+}
+
+void Start(int TCP_socket, string commandInput) {
+    int len = commandInput.length();
+    char sendMessage[512] = {};
+    commandInput.copy(sendMessage, len);
+    char receiveMessage[128] = {};
+
+    int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the server." << endl;
+    }
+
+    int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
+    if (errR == -1) {
+        cout << "[Error] Fail to receive message from the server." << endl;
+    }
+    else {
+        cout << receiveMessage << endl;
+        if (receiveMessage == "Please typing a 4-digit number:") {
+            Game(TCP_socket);
         }
     }
 }
@@ -207,7 +210,7 @@ int main(int argc, char* argv[]) {
     } 
 
     // set the socket  
-    bzero(&serverAddr, izeof(serverAddr));
+    bzero(&serverAddr, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;  
     serverAddr.sin_port = htons(serverPort);  
     serverAddr.sin_addr.s_addr = inet_addr(serverIP); 
@@ -220,7 +223,6 @@ int main(int argc, char* argv[]) {
     }
     
     string commandInput = "";
-    string
     vector<string> command;
 
     Welcome(TCP_socket);
