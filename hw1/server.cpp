@@ -61,13 +61,13 @@ void Register(int UDP_socket, vector<string>recVec, struct sockassr_in &clientAd
 
     int len = sendBack.length();
     sendBack.copy(sendMessage, len);
-    int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const strucr sockaddr*) &clientAddr, sizeof(clientAddr));
+    int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &clientAddr, sizeof(clientAddr));
     if (errS == -1) {
         cout << "[Error] Fail to receive message from the client." << endl;
     }
 }
 
-void Rule(int UDP_socket, struct sockaddr_in &clientAddr) {
+void Rule(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAddr) {
     string sendBack;
     char sendMessage[512] = {};
     
@@ -80,7 +80,7 @@ void Rule(int UDP_socket, struct sockaddr_in &clientAddr) {
         \n2.1 The number of \"A\", which are digits in the guess that are in the correct position.\
         \n2.2 The number of \"B\", which are digits in the guess that are in the answer but are in the wrong position.\
         \nThe hint will be formatted as \"xAyB\".\
-        \n3. 5 chances for each question."
+        \n3. 5 chances for each question.";
     }
 
     int len = sendBack.length();
@@ -92,7 +92,7 @@ void Rule(int UDP_socket, struct sockaddr_in &clientAddr) {
     }
 }
 
-void Exit(int newClient, string user) {
+void Exit(int newClient, vector<string>recVecTCP, string user) {
     string sendBack;
     char sendMessage[512] = {};
 
@@ -116,7 +116,7 @@ void Exit(int newClient, string user) {
     }
 }
 
-string Logout(int newClient, string user) {
+string Logout(int newClient, vector<string>recVecTCP, string user) {
     char sendMessage[512] = {};
     string sendBack;
     string loginUser = user;
@@ -200,12 +200,12 @@ void Start(int newClient, vector<string> recVecTCP, string user) {
         sendBack = "Please login first.";
     }
     else if (recVecTCP.size() == 2) {
-        bool check = check4digits();
+        ans = recVecTCP[1];
+        bool check = check4digits(ans);
         if (!check) {
             sendBack = "Usage: start-game <4-digit number>";
         }
         else {
-            ans = recVecTCP[1];
             sendBack = "Please typing a 4-digit number:";
         }
     }
@@ -290,13 +290,13 @@ void* Connection(void* data) {
         recVecTCP = split(receiveMessage);
 
         if (recVecTCP[0] == "exit") {
-            Exit(newClient, loginUser);
+            Exit(newClient, recVecTCP, loginUser);
         }
         else if (recVecTCP[0] == "login") {
             loginUser = Login(newClient, recVecTCP, loginUser);
         }
         else if (recVecTCP[0] == "logout") {
-            loginUser = Logout(newClient, loginUser);
+            loginUser = Logout(newClient, recVecTCP, loginUser);
         }
         else if (recVecTCP[0] == "start-game") {
             Start(newClient, recVecTCP, loginUser);
@@ -385,7 +385,7 @@ int main(int argc, char* argv[]) {
 
         // message is sent by TCP
         if (FD_ISSET(TCP_socket, &set)) {
-            newClient = accept(TCP_socket, (struct addr*) &clientAddr, sizeof(clientAddr));
+            newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, sizeof(clientAddr));
             cout << "New Connection." << endl;
             Welcome(newClient);
             pthread_create(&pid, NULL, Connection, &newClient);
@@ -405,7 +405,7 @@ int main(int argc, char* argv[]) {
                 Register(UDP_socket, recVec, clientAddr);
             }
             else if (recVec[0] == "game-rule") {
-                Rule(UDP_socket, clientAddr);
+                Rule(UDP_socket, recVec, clientAddr);
             }
             else {
                 cout << "[Error] receive command not found." << endl;
