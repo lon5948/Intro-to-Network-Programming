@@ -57,7 +57,7 @@ void Register(int UDP_socket, string commandInput, struct sockaddr_in &serverAdd
         cout << "[Error] Fail to send message to the server." << endl;
     }
 
-    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, &serverAddrLen);
+    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
     if (errR == -1) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
@@ -114,7 +114,7 @@ void Rule(int UDP_socket, struct sockaddr_in &serverAddr) {
         cout << "[Error] Fail to send message to the server." << endl;
     }
 
-    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (const struct sockaddr*) &serverAddr, &serverAddrLen);
+    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
     if (errR == -1) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
