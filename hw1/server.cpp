@@ -134,7 +134,7 @@ string Logout(int newClient, string user) {
 
     int len = sendBack.length();
     sendBack.copy(sendMessage, len);
-    int errS = send(newClient, sendMessag ,sizeof(sendMessag), 0);
+    int errS = send(newClient, sendMessage ,sizeof(sendMessage), 0);
     if (errS == -1) {
         cout << "[Error] Fail to send message from the client." << endl;
     }
@@ -234,7 +234,7 @@ void Start(int newClient, vector<string> recVecTCP, string user) {
 void Game(int newClient, string ans) {
     char receiveMessage[512] = {};
     string input, sendBack;
-    int chance = 5
+    int chance = 5, A = 0, B = 0;
 
     while (chance > 0) {
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage), 0);
@@ -247,9 +247,30 @@ void Game(int newClient, string ans) {
         if (!check) {
             sendBack = "Your guess should be a 4-digit number.";
         }
-        
+        else if (input == ans) {
+            sendBack = "You got the answer!";
+            chance = 0;
+        }
+        else {
+            for (int i = 0; i < 4; i++) { 
+                for (int j = 0; j < 4; j++) { 
+                    if (input[i] == input[j]) {
+                        if (i == j) A++;
+                        else B++;
+                    }
+                }
+            }
+            sendBack = to_string(A) + "A" + to_string(B) +"B";
+            if ((--chance) == 0) {
+               sendBack += "\nYou lose the game!";
+            } 
+        }
+
+        int errS = send(newClient, receiveMessage, sizeof(receiveMessage), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
     }
-    
 }
 
 void* Connection(void* data) {
@@ -275,10 +296,10 @@ void* Connection(void* data) {
             loginUser = Login(newClient, recVecTCP, loginUser);
         }
         else if (recVecTCP[0] == "logout") {
-            Logout(newClient, loginUser);
+            loginUser = Logout(newClient, loginUser);
         }
         else if (recVecTCP[0] == "start-game") {
-            Start();
+            Start(newClient, recVecTCP, loginUser);
         }
         else {
             cout << "[Error] receive command not found." << endl;

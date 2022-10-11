@@ -145,7 +145,7 @@ void Start(int TCP_socket, string commandInput) {
 
 void Game(int TCP_socket) {
     string number;
-    char sendMessage[4] = {};
+    char sendMessage[512] = {};
     char receiveMessage[512] = {};
 
     while(cin >> number) {
@@ -160,16 +160,13 @@ void Game(int TCP_socket) {
         if (errR == -1) {
             cout << "[Error] Fail to receive message from the server." << endl;
         }
-        else if (receiveMessage == "Correct") {
-            cout << "You got the answer!" << endl;
-            break;
-        }
-        else if (receiveMessage == "Guess more than five times") {
-            cout << "You lose the game!" << endl;
-            break;
-        }
         else {
             cout << receiveMessage << endl;
+            char substr[19];
+            strncpy_s(substr, receiveMessage + 5, 18);
+            if (receiveMessage == "You got the answer!" || substr == "You lose the game!") {
+                break;
+            }
         }
     }
 }
