@@ -37,7 +37,7 @@ void Welcome(int TCP_socket) {
     }
 }
 
-void Register(int UDP_socket, vector<string>recVec, struct sockassr_in &clientAddr) {
+void Register(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAddr) {
     string sendBack;
     char sendMessage[512] = {};
 
@@ -370,6 +370,7 @@ int main(int argc, char* argv[]) {
     int nfds = max(TCP_socket, UDP_socket) + 1;
     int newClient;
     struct sockaddr_in clientAddr;
+    int clientAddrLen = sizeof(clientAddr);
     char receiveMessage[512] = {};
     vector<string> recVec;
     pthread_t pid;
@@ -385,7 +386,7 @@ int main(int argc, char* argv[]) {
 
         // message is sent by TCP
         if (FD_ISSET(TCP_socket, &set)) {
-            newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, sizeof(clientAddr));
+            newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, &clientAddrLen);
             cout << "New Connection." << endl;
             Welcome(newClient);
             pthread_create(&pid, NULL, Connection, &newClient);
@@ -393,7 +394,7 @@ int main(int argc, char* argv[]) {
         
         // message is sent by UDP
         if (FD_ISSET(UDP_socket, &set)) {
-            int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage),0, (struct sockaddr*) &clientAddr, sizeof(clientAddr));
+            int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage),0, (struct sockaddr*) &clientAddr, &clientAddrLen);
             if (errR == -1) {
                 cout << "[Error] Fail to receive message from the client." << endl;
                 return 0;
