@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
     // connect to a remote host
     int errC = connect(TCP_socket, (struct sockaddr*) &serverAddr, sizeof(serverAddr));  
     if (errC == -1) {
-        cout << "[Error] Fail to connect server." << endl;
+        cout << "[Error] Fail to connect the server." << endl;
         return 0;
     }
     
@@ -250,7 +250,13 @@ int main(int argc, char* argv[]) {
             Start(TCP_socket, commandInput);
         }
         else {
-            cout << "command not found." << endl;
+            cout << "Usage:" << endl;
+            cout << "1. register <username> <email> <password>" << endl;
+            cout << "2. login <username> <password>" << endl;
+            cout << "3. logout" << endl;
+            cout << "4. game-rule" << endl;
+            cout << "5. start-game <4-digit number>" << endl;
+            cout << "6. exit" << endl;
         }
     }
     return 0;

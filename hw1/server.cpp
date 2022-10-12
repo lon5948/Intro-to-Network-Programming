@@ -41,13 +41,14 @@ void Register(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAd
     string sendBack;
     char sendMessage[512] = {};
 
-    map<string,string>::iterator itName = nameMap.find(recVec[1]);
-    map<string,string>::iterator itEmail = emailMap.find(recVec[2]);
-
     if (recVec.size() != 4) {
         sendBack = "Usage: register <username> <email> <password>";
     }
-    else if (itName != nameMap.end()) {
+
+    map<string,string>::iterator itName = nameMap.find(recVec[1]);
+    map<string,string>::iterator itEmail = emailMap.find(recVec[2]);
+
+    if (itName != nameMap.end()) {
         sendBack = "Username is already used.";
     }
     else if (itEmail != emailMap.end()) {
