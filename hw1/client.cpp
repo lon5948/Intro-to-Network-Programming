@@ -33,8 +33,11 @@ void Welcome(int TCP_socket) {
     }
 }
 
-void Exit(int TCP_socket, int UDP_socket) {
-    char sendMessage[512] = { "exit" };
+void Exit(int TCP_socket, string commandInput, int UDP_socket) {
+    int len = commandInput.length();
+    char sendMessage[512] = {};
+    commandInput.copy(sendMessage, len);
+    char receiveMessage[512] = {};
 
     int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
     if (errS == -1) {
@@ -86,8 +89,11 @@ void Login(int TCP_socket, string commandInput) {
     }
 }
 
-void Logout(int TCP_socket) {
-    char sendMessage[] = { "logout" };
+void Logout(int TCP_socket, string commandInput) {
+    int len = commandInput.length();
+    char sendMessage[512] = {};
+    commandInput.copy(sendMessage, len);
+    char receiveMessage[512] = {};
     char receiveMessage[128] = {};
 
     int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
@@ -104,8 +110,11 @@ void Logout(int TCP_socket) {
     }
 }
 
-void Rule(int UDP_socket, struct sockaddr_in &serverAddr) {
-    char sendMessage[] = { "game-rule" };
+void Rule(int UDP_socket, string commandInput, struct sockaddr_in &serverAddr) {
+    int len = commandInput.length();
+    char sendMessage[512] = {};
+    commandInput.copy(sendMessage, len);
+    char receiveMessage[512] = {};
     char receiveMessage[512] = {};
     socklen_t serverAddrLen = sizeof(serverAddr); 
 
@@ -231,7 +240,7 @@ int main(int argc, char* argv[]) {
         command = split(commandInput);
         
         if (command[0] == "exit") {
-            Exit(TCP_socket, UDP_socket);
+            Exit(TCP_socket, commandInput, UDP_socket);
             return 0;
         }
         else if (command[0] == "register") {
@@ -241,10 +250,10 @@ int main(int argc, char* argv[]) {
             Login(TCP_socket, commandInput);
         }
         else if (command[0] == "logout") {
-            Logout(TCP_socket);
+            Logout(TCP_socket, commandInput);
         }
         else if (command[0] == "game-rule") {
-            Rule(UDP_socket, serverAddr);
+            Rule(UDP_socket,commandInput, serverAddr);
         }
         else if (command[0] == "start-game") {
             Start(TCP_socket, commandInput);
