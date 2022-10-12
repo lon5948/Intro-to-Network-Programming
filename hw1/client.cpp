@@ -94,7 +94,6 @@ void Logout(int TCP_socket, string commandInput) {
     char sendMessage[512] = {};
     commandInput.copy(sendMessage, len);
     char receiveMessage[512] = {};
-    char receiveMessage[128] = {};
 
     int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
     if (errS == -1) {
@@ -114,7 +113,6 @@ void Rule(int UDP_socket, string commandInput, struct sockaddr_in &serverAddr) {
     int len = commandInput.length();
     char sendMessage[512] = {};
     commandInput.copy(sendMessage, len);
-    char receiveMessage[512] = {};
     char receiveMessage[512] = {};
     socklen_t serverAddrLen = sizeof(serverAddr); 
 
