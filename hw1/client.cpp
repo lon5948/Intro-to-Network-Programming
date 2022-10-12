@@ -71,9 +71,9 @@ void Register(int UDP_socket, string commandInput, struct sockaddr_in &serverAdd
 
 void Login(int TCP_socket, string commandInput) {
     int len = commandInput.length();
-    char sendMessage[len] = {};
+    char sendMessage[512] = {};
     commandInput.copy(sendMessage, len);
-    char receiveMessage[128] = {};
+    char receiveMessage[512] = {};
 
     int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
     if (errS == -1) {
