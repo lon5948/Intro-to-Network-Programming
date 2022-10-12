@@ -44,22 +44,23 @@ void Register(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAd
     if (recVec.size() != 4) {
         sendBack = "Usage: register <username> <email> <password>";
     }
-
-    map<string,string>::iterator itName = nameMap.find(recVec[1]);
-    map<string,string>::iterator itEmail = emailMap.find(recVec[2]);
-
-    if (itName != nameMap.end()) {
-        sendBack = "Username is already used.";
-    }
-    else if (itEmail != emailMap.end()) {
-        sendBack = "Email is already used.";
-    }
     else {
-        nameMap[recVec[1]] = recVec[3];
-        emailMap[recVec[2]] = recVec[1];
-        sendBack = "Register successfully.";
-    }
+        map<string,string>::iterator itName = nameMap.find(recVec[1]);
+        map<string,string>::iterator itEmail = emailMap.find(recVec[2]);
 
+        if (itName != nameMap.end()) {
+            sendBack = "Username is already used.";
+        }
+        else if (itEmail != emailMap.end()) {
+            sendBack = "Email is already used.";
+        }
+        else {
+            nameMap[recVec[1]] = recVec[3];
+            emailMap[recVec[2]] = recVec[1];
+            sendBack = "Register successfully.";
+        }
+    }
+    
     int len = sendBack.length();
     sendBack.copy(sendMessage, len);
     int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &clientAddr, sizeof(clientAddr));
@@ -148,23 +149,25 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     string loginUser = user;
     string sendBack;
 
-    map<string,string>::iterator it = nameMap.find(recVecTCP[1]);
-
     if (recVecTCP.size() != 3) {
         sendBack = "Usage: login <username> <password>";
     }
-    else if (user != "") {
-        sendBack = "Please logout first.";
-    }
-    else if (it == nameMap.end()) {
-        sendBack = "Username not found.";
-    }
-    else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
-        sendBack = "Password not correct.";
-    }
     else {
-        loginUser = recVecTCP[1];
-        sendBack = "Welcome, "+ recVecTCP[1] + ".";
+        map<string,string>::iterator it = nameMap.find(recVecTCP[1]);
+
+        if (user != "") {
+            sendBack = "Please logout first.";
+        }
+        else if (it == nameMap.end()) {
+            sendBack = "Username not found.";
+        }
+        else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
+            sendBack = "Password not correct.";
+        }
+        else {
+            loginUser = recVecTCP[1];
+            sendBack = "Welcome, "+ recVecTCP[1] + ".";
+        }
     }
 
     int len = sendBack.length();
