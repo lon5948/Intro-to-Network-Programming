@@ -79,13 +79,13 @@ void Login(int TCP_socket, string commandInput) {
     if (errS == -1) {
         cout << "[Error] Fail to send message to the server." << endl;
     }
-
+    
     int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
     if (errR == -1) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
     else {
-        cout << receiveMessage << endl;
+        cout << "m: " << receiveMessage << endl;
     }
 }
 

@@ -148,25 +148,32 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     char sendMessage[512] = {};
     string loginUser = user;
     string sendBack;
+    
+    cout << "login func" << endl;
 
     if (recVecTCP.size() != 3) {
         sendBack = "Usage: login <username> <password>";
+    	cout << "test1" << endl;
     }
     else {
         map<string,string>::iterator it = nameMap.find(recVecTCP[1]);
 
         if (user != "") {
             sendBack = "Please logout first.";
+	    cout << "test2" << endl;
         }
         else if (it == nameMap.end()) {
             sendBack = "Username not found.";
+	    cout << "test3" << endl;
         }
         else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
             sendBack = "Password not correct.";
+	    cout << "test4" << endl;
         }
         else {
             loginUser = recVecTCP[1];
             sendBack = "Welcome, "+ recVecTCP[1] + ".";
+	    cout << "test5" << endl;
         }
     }
 
@@ -176,6 +183,7 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
+    cout << "errS: " << errS << endl;
 
     return loginUser;
 }
@@ -282,7 +290,6 @@ void* Connection(void* data) {
     char receiveMessage[512] = {};
     vector<string> recVecTCP;
     string loginUser = "";
-    char ans[4];
 
     while (1) {
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage),0);
@@ -298,6 +305,7 @@ void* Connection(void* data) {
         }
         else if (recVecTCP[0] == "login") {
             loginUser = Login(newClient, recVecTCP, loginUser);
+	    cout << "call login" << endl;
         }
         else if (recVecTCP[0] == "logout") {
             loginUser = Logout(newClient, recVecTCP, loginUser);
