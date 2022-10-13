@@ -17,6 +17,7 @@ using namespace std;
 
 map<string,string> nameMap; // < username , password >
 map<string,string> emailMap; // < email , username >
+map<string,bool> loginMap; // < username , login >
 
 vector<string> split(string str) {
     vector<string> result;
@@ -57,6 +58,7 @@ void Register(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAd
         else {
             nameMap[recVec[1]] = recVec[3];
             emailMap[recVec[2]] = recVec[1];
+            loginMap[recVec[1]] = false;
             sendBack = "Register successfully.";
         }
     }
@@ -102,6 +104,9 @@ void Exit(int newClient, vector<string>recVecTCP, string user) {
         sendBack = "Usage: exit";
     }
     else {
+        if (user != "") {
+            loginMap[user] = false;
+        }
         close(newClient);
         pthread_exit(0);
     }
@@ -127,6 +132,7 @@ string Logout(int newClient, vector<string>recVecTCP, string user) {
         sendBack = "Please login first.";
     }
     else {
+        loginMap[loginUser] = false;
         loginUser = "";
         sendBack = "Bye, " + user + ".";
     }
@@ -161,7 +167,11 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
         else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
             sendBack = "Password not correct.";
         }
+        else if (loginMap[recVecTCP[1]]) {
+            sendBack = "This account already login.";
+        }
         else {
+            loginMap[loginUser] = true;
             loginUser = recVecTCP[1];
             sendBack = "Welcome, "+ recVecTCP[1] + ".";
         }
