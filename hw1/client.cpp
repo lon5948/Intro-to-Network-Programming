@@ -85,7 +85,7 @@ void Login(int TCP_socket, string commandInput) {
         cout << "[Error] Fail to receive message from the server." << endl;
     }
     else {
-        cout << "m: " << receiveMessage << endl;
+        cout << receiveMessage << endl;
     }
 }
 

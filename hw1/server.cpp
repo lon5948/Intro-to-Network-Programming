@@ -148,8 +148,6 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     char sendMessage[512] = {};
     string loginUser = user;
     string sendBack;
-    
-    cout << "login func" << endl;
 
     if (recVecTCP.size() != 3) {
         sendBack = "Usage: login <username> <password>";
@@ -178,7 +176,6 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
-    cout << "sendMessage: " << sendMessage << endl;
 
     return loginUser;
 }
@@ -392,17 +389,14 @@ int main(int argc, char* argv[]) {
         
         // message is sent by TCP
         if (FD_ISSET(TCP_socket, &set)) {
-            cout << "message is sent by TCP" << endl;
             newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, &clientAddrLen);
             cout << "New Connection." << endl;
             Welcome(newClient);
             pthread_create(&pid, NULL, Connection, (void* )&newClient);
-            cout << "create thread" << endl;
         }
         
         // message is sent by UDP
         if (FD_ISSET(UDP_socket, &set)) {
-            cout << "message is sent by UDP" << endl;
             int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage),0, (struct sockaddr*) &clientAddr, &clientAddrLen);
             if (errR == -1) {
                 cout << "[Error] Fail to receive message from the client." << endl;
