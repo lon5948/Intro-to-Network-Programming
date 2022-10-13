@@ -175,8 +175,11 @@ void Start(int TCP_socket, string commandInput) {
     }
     else {
         cout << receiveMessage << endl;
-        if (receiveMessage == "Please typing a 4-digit number:") {
-           cout << "call client game func" << endl;
+        cout << receiveMessage.size() << endl;
+        char typestr[19];
+        strncpy(typestr, receiveMessage, 31);
+        if (typestr == "Please typing a 4-digit number:") {
+            cout << "call client game func" << endl;
 	       	Game(TCP_socket);
         }
     }
