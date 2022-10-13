@@ -134,7 +134,7 @@ void Game(int TCP_socket) {
     string number;
     char sendMessage[512] = {};
     char receiveMessage[512] = {};
-
+	cout << "client game func" << endl;
     while(cin >> number) {
         int len = number.length();
         number.copy(sendMessage, len);
@@ -176,7 +176,8 @@ void Start(int TCP_socket, string commandInput) {
     else {
         cout << receiveMessage << endl;
         if (receiveMessage == "Please typing a 4-digit number:") {
-            Game(TCP_socket);
+           cout << "call client game func" << endl;
+	       	Game(TCP_socket);
         }
     }
 }

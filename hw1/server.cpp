@@ -197,7 +197,10 @@ void Game(int newClient, string ans) {
     string input, sendBack;
     int chance = 5, A = 0, B = 0;
 
+    cout << "server game func" << endl;
+
     while (chance > 0) {
+	    cout << "chance: " << chance << endl;
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage), 0);
         if (errR == -1) {
             cout << "[Error] Fail to receive message from the client." << endl;
@@ -273,6 +276,7 @@ void Start(int newClient, vector<string> recVecTCP, string user) {
     }
 
     if (ans != "") {
+	    cout << "call server game func" << endl;
         Game(newClient, ans);
     }
 }
