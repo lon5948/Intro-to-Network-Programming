@@ -130,37 +130,7 @@ void Rule(int UDP_socket, string commandInput, struct sockaddr_in &serverAddr) {
     }
 }
 
-void Game(int TCP_socket) {
-    string number;
-    char sendMessage[512] = {};
-    char receiveMessage[512] = {};
-    
-    while(cin >> number) {
-        int len = number.length();
-        number.copy(sendMessage, len);
-        int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
-        if (errS == -1) {
-            cout << "[Error] Fail to send message to the server." << endl;
-        }
-        
-        int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
-        if (errR == -1) {
-            cout << "[Error] Fail to receive message from the server." << endl;
-        }
-        else {
-            cout << receiveMessage << endl;
-            char substr[19];
-            strncpy(substr, receiveMessage + 5, 19);
-            if (!strcmp(receiveMessage, "You got the answer!") || !strncmp(substr, "You lose the game!", 19)) {
-                break;
-            }
-        }
-        memset(&sendMessage, '\0', sizeof(sendMessage));
-        memset(&receiveMessage, '\0', sizeof(receiveMessage));
-    }
-}
-
-void Start(int TCP_socket, string commandInput) {
+void StartGame(int TCP_socket, string commandInput) {
     int len = commandInput.length();
     char sendMessage[512] = {};
     commandInput.copy(sendMessage, len);
@@ -178,7 +148,31 @@ void Start(int TCP_socket, string commandInput) {
     else {
         cout << receiveMessage << endl;
         if (!strcmp(receiveMessage, "Please typing a 4-digit number:")) {
-	       	Game(TCP_socket);
+	       	string number;
+            while(cin >> number) {
+                memset(&sendMessage, '\0', sizeof(sendMessage));
+                memset(&receiveMessage, '\0', sizeof(receiveMessage));
+
+                int len = number.length();
+                number.copy(sendMessage, len);
+                int errS = send(TCP_socket, sendMessage, sizeof(sendMessage), 0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the server." << endl;
+                }
+                
+                int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
+                if (errR == -1) {
+                    cout << "[Error] Fail to receive message from the server." << endl;
+                }
+                else {
+                    cout << receiveMessage << endl;
+                    char substr[19];
+                    strncpy(substr, receiveMessage + 5, 19);
+                    if (!strcmp(receiveMessage, "You got the answer!") || !strncmp(substr, "You lose the game!", 19)) {
+                        break;
+                    }
+                }
+            }
         }
     }
 }
@@ -256,7 +250,7 @@ int main(int argc, char* argv[]) {
             Rule(UDP_socket,commandInput, serverAddr);
         }
         else if (command[0] == "start-game") {
-            Start(TCP_socket, commandInput);
+            StartGame(TCP_socket, commandInput);
         }
         else {
             cout << "Usage:" << endl;
