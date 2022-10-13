@@ -101,9 +101,6 @@ void Exit(int newClient, vector<string>recVecTCP, string user) {
     if (recVecTCP.size() != 1) {
         sendBack = "Usage: exit";
     }
-    else if (user != "") {
-        sendBack = { "Please logout first." };
-    }
     else {
         close(newClient);
         pthread_exit(0);
@@ -193,18 +190,20 @@ bool check4digits(string num) {
 }
 
 void Game(int newClient, string ans) {
+    char sendMessage[512] = {};
     char receiveMessage[512] = {};
     string input, sendBack;
     int chance = 5;
-
+    
     while (chance > 0) {
-        int A=0, B=0;
+        int Anum=0, Bnum=0;
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage), 0);
         if (errR == -1) {
             cout << "[Error] Fail to receive message from the client." << endl;
         }
 
         input = receiveMessage;
+        
         bool check = check4digits(input);
         if (!check) {
             sendBack = "Your guess should be a 4-digit number.";
@@ -215,23 +214,31 @@ void Game(int newClient, string ans) {
         }
         else {
             for (int i = 0; i < 4; i++) { 
+                bool A = false, B = false;
                 for (int j = 0; j < 4; j++) { 
-                    if (input[i] == input[j]) {
-                        if (i == j) A++;
-                        else B++;
+                    if (ans[i] == input[j]) {
+                        if (i == j) A = true;
+                        else B = true;
                     }
                 }
+                if (A) Anum++;
+                else if (B) Bnum++;
             }
-            sendBack = to_string(A) + "A" + to_string(B) +"B";
+            sendBack = to_string(Anum) + "A" + to_string(Bnum) + "B";
             if ((--chance) == 0) {
                sendBack += "\nYou lose the game!";
             } 
         }
 
-        int errS = send(newClient, receiveMessage, sizeof(receiveMessage), 0);
+        int len = sendBack.length();
+        sendBack.copy(sendMessage, len);
+        int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
         if (errS == -1) {
             cout << "[Error] Fail to send message to the client." << endl;
         }
+
+        memset(&sendMessage, '\0', sizeof(sendMessage));
+        memset(&receiveMessage, '\0', sizeof(receiveMessage));
     }
 }
 
@@ -251,6 +258,7 @@ void Start(int newClient, vector<string> recVecTCP, string user) {
         bool check = check4digits(ans);
         if (!check) {
             sendBack = "Usage: start-game <4-digit number>";
+            ans = "";
         }
         else {
             sendBack = "Please typing a 4-digit number:";
@@ -320,7 +328,7 @@ int main(int argc, char* argv[]) {
     // check command format 
     const char* s = "./server";
     try {
-        if (argc!=2 || strcmp(argv[0],s)) {
+        if (argc!=2) {
             cout << "Usage: ./server <server port>" << endl;
             return 0;
         }

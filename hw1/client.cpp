@@ -134,7 +134,7 @@ void Game(int TCP_socket) {
     string number;
     char sendMessage[512] = {};
     char receiveMessage[512] = {};
-	cout << "client game func" << endl;
+    
     while(cin >> number) {
         int len = number.length();
         number.copy(sendMessage, len);
@@ -142,7 +142,7 @@ void Game(int TCP_socket) {
         if (errS == -1) {
             cout << "[Error] Fail to send message to the server." << endl;
         }
-
+        
         int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
         if (errR == -1) {
             cout << "[Error] Fail to receive message from the server." << endl;
@@ -150,11 +150,13 @@ void Game(int TCP_socket) {
         else {
             cout << receiveMessage << endl;
             char substr[19];
-            strncpy(substr, receiveMessage + 5, 18);
-            if (!strcmp(receiveMessage, "You got the answer!") || !strcmp(substr, "You lose the game!")) {
+            strncpy(substr, receiveMessage + 5, 19);
+            if (!strcmp(receiveMessage, "You got the answer!") || !strncmp(substr, "You lose the game!", 19)) {
                 break;
             }
         }
+        memset(&sendMessage, '\0', sizeof(sendMessage));
+        memset(&receiveMessage, '\0', sizeof(receiveMessage));
     }
 }
 
@@ -176,7 +178,6 @@ void Start(int TCP_socket, string commandInput) {
     else {
         cout << receiveMessage << endl;
         if (!strcmp(receiveMessage, "Please typing a 4-digit number:")) {
-            cout << "call client game func" << endl;
 	       	Game(TCP_socket);
         }
     }
@@ -192,7 +193,7 @@ int main(int argc, char* argv[]) {
     // check command format  
     const char* s = "./client";
     try {
-        if (argc!=3 || strcmp(argv[0], s)) {
+        if (argc!=3) {
             cout << "Usage: ./client <server IP> <server port>" << endl;
             return 0;
         }
