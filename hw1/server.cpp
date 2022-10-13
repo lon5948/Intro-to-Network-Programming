@@ -153,27 +153,22 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
 
     if (recVecTCP.size() != 3) {
         sendBack = "Usage: login <username> <password>";
-    	cout << "test1" << endl;
     }
     else {
         map<string,string>::iterator it = nameMap.find(recVecTCP[1]);
 
         if (user != "") {
             sendBack = "Please logout first.";
-	    cout << "test2" << endl;
         }
         else if (it == nameMap.end()) {
             sendBack = "Username not found.";
-	    cout << "test3" << endl;
         }
         else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
             sendBack = "Password not correct.";
-	    cout << "test4" << endl;
         }
         else {
             loginUser = recVecTCP[1];
             sendBack = "Welcome, "+ recVecTCP[1] + ".";
-	    cout << "test5" << endl;
         }
     }
 
@@ -183,7 +178,7 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
-    cout << "errS: " << errS << endl;
+    cout << "sendMessage: " << sendMessage << endl;
 
     return loginUser;
 }
@@ -305,7 +300,6 @@ void* Connection(void* data) {
         }
         else if (recVecTCP[0] == "login") {
             loginUser = Login(newClient, recVecTCP, loginUser);
-	    cout << "call login" << endl;
         }
         else if (recVecTCP[0] == "logout") {
             loginUser = Logout(newClient, recVecTCP, loginUser);
@@ -395,17 +389,20 @@ int main(int argc, char* argv[]) {
             cout << "[Error] Fail to select." << endl;
             return 0;
         }
-
+        
         // message is sent by TCP
         if (FD_ISSET(TCP_socket, &set)) {
+            cout << "message is sent by TCP" << endl;
             newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, &clientAddrLen);
             cout << "New Connection." << endl;
             Welcome(newClient);
-            pthread_create(&pid, NULL, Connection, &newClient);
+            pthread_create(&pid, NULL, Connection, (void* )&newClient);
+            cout << "create thread" << endl;
         }
         
         // message is sent by UDP
         if (FD_ISSET(UDP_socket, &set)) {
+            cout << "message is sent by UDP" << endl;
             int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage),0, (struct sockaddr*) &clientAddr, &clientAddrLen);
             if (errR == -1) {
                 cout << "[Error] Fail to receive message from the client." << endl;
