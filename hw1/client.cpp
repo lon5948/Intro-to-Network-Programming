@@ -151,7 +151,7 @@ void Game(int TCP_socket) {
             cout << receiveMessage << endl;
             char substr[19];
             strncpy(substr, receiveMessage + 5, 18);
-            if (receiveMessage == "You got the answer!" || substr == "You lose the game!") {
+            if (!strcmp(receiveMessage, "You got the answer!") || !strcmp(substr, "You lose the game!")) {
                 break;
             }
         }
@@ -175,10 +175,7 @@ void Start(int TCP_socket, string commandInput) {
     }
     else {
         cout << receiveMessage << endl;
-        cout << receiveMessage.size() << endl;
-        char typestr[19];
-        strncpy(typestr, receiveMessage, 31);
-        if (typestr == "Please typing a 4-digit number:") {
+        if (!strcmp(receiveMessage, "Please typing a 4-digit number:")) {
             cout << "call client game func" << endl;
 	       	Game(TCP_socket);
         }
