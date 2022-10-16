@@ -268,7 +268,6 @@ void StartGame(int newClient, vector<string> recVecTCP, string user) {
                 for (int i = 0; i < 4; i++) { 
                     if (input[i] == ans[i]) {
                         Anum++;
-                        vecA[i] = true;
                     }
                     else {
                         vecInput[input[i]] += 1;
