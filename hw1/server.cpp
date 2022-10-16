@@ -247,7 +247,9 @@ void StartGame(int newClient, vector<string> recVecTCP, string user) {
             int Anum=0, Bnum=0;
             memset(&sendMessage, '\0', sizeof(sendMessage));
             memset(&receiveMessage, '\0', sizeof(receiveMessage));
-            
+            vector<int> vecInput(10,0);
+            vector<int> vecAns(10,0);
+
             int errR = recv(newClient, receiveMessage, sizeof(receiveMessage), 0);
             if (errR == -1) {
                 cout << "[Error] Fail to receive message from the client." << endl;
@@ -264,15 +266,19 @@ void StartGame(int newClient, vector<string> recVecTCP, string user) {
             }
             else {
                 for (int i = 0; i < 4; i++) { 
-                    bool A = false, B = false;
-                    for (int j = 0; j < 4; j++) { 
-                        if (ans[i] == input[j]) {
-                            if (i == j) A = true;
-                            else B = true;
-                        }
+                    if (input[i] == ans[i]) {
+                        Anum++;
+                        vecA[i] = true;
                     }
-                    if (A) Anum++;
-                    else if (B) Bnum++;
+                    else {
+                        vecInput[input[i]] += 1;
+                        vecAns[ans[i]] += 1;
+                    }
+                }
+                for (int i = 0; i < 10; i++) { 
+                    if (vecInput[i] > 0 && vecAns[i] > 0) {
+                        Bnum += min(vecInput[i], vecAns[i]);
+                    }
                 }
                 sendBack = to_string(Anum) + "A" + to_string(Bnum) + "B";
                 if ((--chance) == 0) {
@@ -315,7 +321,7 @@ void* Connection(void* data) {
             loginUser = Logout(newClient, recVecTCP, loginUser);
         }
         else if (recVecTCP[0] == "start-game") {
-            Start(newClient, recVecTCP, loginUser);
+            StartGame(newClient, recVecTCP, loginUser);
         }
         else {
             cout << "[Error] receive command not found." << endl;
@@ -330,7 +336,6 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in serverAddr;   
 
     // check command format 
-    const char* s = "./server";
     try {
         if (argc!=2) {
             cout << "Usage: ./server <server port>" << endl;

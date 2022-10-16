@@ -150,6 +150,7 @@ void StartGame(int TCP_socket, string commandInput) {
         if (!strcmp(receiveMessage, "Please typing a 4-digit number:")) {
 	       	string number;
             while(cin >> number) {
+                cin.get();
                 memset(&sendMessage, '\0', sizeof(sendMessage));
                 memset(&receiveMessage, '\0', sizeof(receiveMessage));
 
@@ -185,7 +186,6 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in serverAddr;  
 
     // check command format  
-    const char* s = "./client";
     try {
         if (argc!=3) {
             cout << "Usage: ./client <server IP> <server port>" << endl;
@@ -231,6 +231,7 @@ int main(int argc, char* argv[]) {
     Welcome(TCP_socket);
 
     while (getline(cin, commandInput)) {
+        
         command = split(commandInput);
         
         if (command[0] == "exit") {
@@ -251,6 +252,7 @@ int main(int argc, char* argv[]) {
         }
         else if (command[0] == "start-game") {
             StartGame(TCP_socket, commandInput);
+            
         }
         else {
             cout << "Usage:" << endl;
@@ -261,6 +263,7 @@ int main(int argc, char* argv[]) {
             cout << "5. start-game <4-digit number>" << endl;
             cout << "6. exit" << endl;
         }
+        
     }
     return 0;
 }
