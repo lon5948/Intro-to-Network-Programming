@@ -80,7 +80,7 @@ void Rule(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAddr) 
     }
     else {
         sendBack = "1. Each question is a 4-digit secret number.\
-        \n2. After each guess, you will get a hint with the following information :\
+        \n2. After each guess, you will get a hint with the following information:\
         \n2.1 The number of \"A\", which are digits in the guess that are in the correct position.\
         \n2.2 The number of \"B\", which are digits in the guess that are in the answer but are in the wrong position.\
         \nThe hint will be formatted as \"xAyB\".\
@@ -158,7 +158,7 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     else {
         map<string,string>::iterator it = nameMap.find(recVecTCP[1]);
 
-        if (user != "") {
+        if (user != "" || loginMap[recVecTCP[1]]) {
             sendBack = "Please logout first.";
         }
         else if (it == nameMap.end()) {
@@ -166,9 +166,6 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
         }
         else if (nameMap[recVecTCP[1]] != recVecTCP[2]) {
             sendBack = "Password not correct.";
-        }
-        else if (loginMap[recVecTCP[1]]) {
-            sendBack = "This account already login.";
         }
         else {
             loginMap[loginUser] = true;
@@ -270,8 +267,8 @@ void StartGame(int newClient, vector<string> recVecTCP, string user) {
                         Anum++;
                     }
                     else {
-                        vecInput[input[i]] += 1;
-                        vecAns[ans[i]] += 1;
+                        vecInput[int(input[i])-int('0')] += 1;
+                        vecAns[int(ans[i])-int('0')] += 1;
                     }
                 }
                 for (int i = 0; i < 10; i++) { 
@@ -365,6 +362,19 @@ int main(int argc, char* argv[]) {
     serverAddr.sin_family = AF_INET;  
     serverAddr.sin_port = htons(serverPort);  
     serverAddr.sin_addr.s_addr = INADDR_ANY; 
+    
+    // set socket opt
+    int flag = 1; 
+    int errSOT = setsockopt(TCP_socket, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    if (errSOT == -1) {
+        cout << "[Error] Fail to set socket opt (TCP)." << endl;
+        return 0;
+    }
+    int errSOU = setsockopt(UDP_socket, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
+    if (errSOU == -1) {
+        cout << "[Error] Fail to set socket opt. (UDP)" << endl;
+        return 0;
+    }
 
     // bind a socket to a local IP address and a port number
     int errBT = bind(TCP_socket, (struct sockaddr*) &serverAddr, sizeof(serverAddr));  
