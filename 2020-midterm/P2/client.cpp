@@ -67,11 +67,22 @@ int main(int argc, char* argv[]) {
     char sendMessage[512] = {};
     char receiveMessage[512] = {};
 
+    int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
+    if (errR == -1) {
+      cout << "[Error] Fail to receive message from the server." << endl;
+    }
+    else {
+        cout << receiveMessage << endl;
+    }
+
+    cout << "% ";
     while (getline(cin, commandInput)) {
         
         command = split(commandInput);
         
         if (command[0] == "list-users" || command[0] == "get-ip") {
+            int len = commandInput.length();
+            commandInput.copy(sendMessage, len);
             int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
             if (errS == -1) {
                 cout << "[Error] Fail to send message to the server." << endl;
@@ -85,6 +96,8 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (command[0] == "exit") {
+            int len = commandInput.length();
+            commandInput.copy(sendMessage, len);
             int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
             if (errS == -1) {
                 cout << "[Error] Fail to send message to the server." << endl;
@@ -109,6 +122,8 @@ int main(int argc, char* argv[]) {
         memset(sendMessage, '\0', sizeof(sendMessage));
         memset(receiveMessage, '\0', sizeof(receiveMessage));
         commandInput.clear();
+
+        cout << "% " ;
     }
     return 0;
 }

@@ -15,7 +15,7 @@ using namespace std;
 
 #define MAX_CLIENT 10
 map<int, bool> user;
-int usernum;
+int usernum = 1;
 
 struct struc{
     int newc;
@@ -42,8 +42,7 @@ void* Connection(void* data) {
     char sendMessage[512] = {};
     char receiveMessage[512] = {};
     vector<string> recVecTCP;
-    string loginUser = "";
-
+    
     while (1) {
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage),0);
         if (errR == -1) {
@@ -52,30 +51,32 @@ void* Connection(void* data) {
         }
 
         recVecTCP = split(receiveMessage);
-
         string sendBack;
+
         if (recVecTCP[0] == "list-users") {
             if (recVecTCP.size() != 1) {
                 sendBack = "Usage: list-users";
             }
             else {
                 map<int, bool>::iterator it;
-                sendBack = "1. Success:\n";
+                sendBack = "Success:\n";
                 for (it = user.begin(); it != user.end(); it++) {
                     if (it->second) {
-                        string s = "user" + it->first + '\n';
+                        string s = "user" + to_string(it->first) + '\n';
                         sendBack += s;
                     }
                 }
             }
         }
         else if (recVecTCP[0] == "get-ip") {
-            sendBack = "1. Success:\nIP: ";
+            sendBack = "Success:\nIP: ";
             sendBack += ipandport;
         }
         else if (recVecTCP[0] == "exit") {
-            sendBack = "1. Success:\nBye, user";
-            sendBack += num;
+            sendBack = "Success:\nBye, user" + to_string(num) +".";
+            user[num] = false;
+            close(newClient);
+            pthread_exit(0);
         }
 
         int len = sendBack.length();
@@ -154,13 +155,24 @@ int main(int argc, char* argv[]) {
 
     while(1) {
         newClient = accept(TCP_socket, (struct sockaddr*) &clientAddr, &clientAddrLen);
-        string tcpIpandPort = sockaddr_in_to_string((sockaddr_in * ) &clientAddr);
+        stringstream ss;
+        ss << inet_ntoa(clientAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port);
+        string tcpIpandPort = ss.str();
         cout << "New connection from " << tcpIpandPort << " user" << usernum << endl;
         user[usernum] = true;
         struc inp;
         inp.newc = newClient;
         inp.ipandport = tcpIpandPort;
         inp.num = usernum;
+        // welcome
+        string sendBack = "Welcome, you are user" + to_string(usernum) + ".";
+        int len = sendBack.length();
+        sendBack.copy(sendMessage, len);
+        int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
+        usernum++;
         pthread_create(&pid, NULL, Connection, (void* )&inp);
     }
 }
