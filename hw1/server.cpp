@@ -357,7 +357,7 @@ int main(int argc, char* argv[]) {
         return 0;
     } 
 
-    // set the socket  
+    // set the serverAddr  
     bzero(&serverAddr,sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;  
     serverAddr.sin_port = htons(serverPort);  
