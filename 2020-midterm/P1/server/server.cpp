@@ -4,6 +4,7 @@
 #include <time.h>
 #include <cstring> 
 #include <sstream>
+#include <fstream>
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -11,6 +12,7 @@
 #include <arpa/inet.h>  
 #include <dirent.h> 
 #include <fcntl.h>
+
 
 using namespace std;
 
@@ -71,8 +73,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    char sendMessage[512] = {};
-    char receiveMessage[512] = {};
+    char sendMessage[2048] = {};
+    char receiveMessage[2048] = {};
     vector<string> recVec;
     int len;
 
@@ -87,14 +89,11 @@ int main(int argc, char* argv[]) {
 
         if (recVec[0] == "get-file-list") {
             string sendBack = "Files: ";
-            struct dirent **nameList;
-            int fileNum;
-            fileNum = scandir(".", &nameList, 0, alphasort);
-            for (int i = 0; i < fileNum ; i++) {
-                if (nameList[i]->d_type == DT_REG) {
-                    sendBack += nameList[i]->d_name;
-                    sendBack += " ";
-                }
+            DIR *dp = opendir(".");
+            struct dirent *filename;
+            while (filename = readdir(dp)) {
+                sendBack += filename->d_name;
+                sendBack += " ";
             }
 
             len = sendBack.length();
@@ -105,27 +104,20 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (recVec[0] == "get-file") {
+            string sendBack = "";
+            string line;
             for (int i = 1; i < recVec.size(); i++) {
-                string filename = recVec[i];
-                int filefd = open(filename.c_str(), O_CREAT | O_RDONLY, S_IWUSR | S_IRUSR);
-                int read_length;
-                char *read_buffer = new char[512];
-                while ((read_length = read(filefd, read_buffer, 512))) {
-                    char *transfer_data = new char[filename.size() + 1 + read_length];
-                    memcpy(transfer_data, filename.c_str(), filename.size());
-                    memset(transfer_data + filename.size(), ' ', 1);
-                    memcpy(transfer_data + filename.size() + 1, read_buffer, read_length);
-                    sendto(UDP_socket, transfer_data, filename.size() + 1 + read_length, 0, (const struct sockaddr*) &clientAddr, sizeof(clientAddr));
-                    delete[] transfer_data;
+                ifstream file(recVec[i]);
+                sendBack = "";
+                while (getline(file, line)) {
+                    sendBack += '\n';
                 }
-                len = filename.length();
-                filename.copy(sendMessage, len);
+                len = sendBack.length();
+                sendBack.copy(sendMessage, len);
                 int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &clientAddr, sizeof(clientAddr));
                 if (errS == -1) {
-                    cout << "[Error] Fail to receive message from the client." << endl;
+                    cout << "[Error] Fail to send message to the client." << endl;
                 }
-                delete[] read_buffer;
-                close(filefd);
             }
         }
         
