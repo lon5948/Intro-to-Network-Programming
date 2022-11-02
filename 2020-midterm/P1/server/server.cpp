@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    char sendMessage[2048] = {};
-    char receiveMessage[2048] = {};
+    char sendMessage[16384] = {};
+    char receiveMessage[16384] = {};
     vector<string> recVec;
     int len;
 
@@ -109,8 +109,13 @@ int main(int argc, char* argv[]) {
             for (int i = 1; i < recVec.size(); i++) {
                 ifstream file(recVec[i]);
                 sendBack = "";
+                memset(sendMessage, '\0', sizeof(sendMessage));
                 while (getline(file, line)) {
-                    sendBack += '\n';
+                    if (line.size() && line[line.size() - 1] == '\r' ) {
+                        line = line.substr( 0, line.size() - 1);
+                    }
+                    sendBack += line;
+                    sendBack += "\n";
                 }
                 len = sendBack.length();
                 sendBack.copy(sendMessage, len);

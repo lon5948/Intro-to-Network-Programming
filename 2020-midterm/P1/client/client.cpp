@@ -63,8 +63,8 @@ int main(int argc, char* argv[]) {
     socklen_t serverAddrLen = sizeof(serverAddr);
     int len;
     int filefd = -1;
-    char sendMessage[2048] = {};
-    char receiveMessage[2048] = {};
+    char sendMessage[16384] = {};
+    char receiveMessage[16384] = {};
 
     cout << "% " ;
     while (getline(cin, commandInput)) {
@@ -95,26 +95,28 @@ int main(int argc, char* argv[]) {
         else if (command[0] == "get-file") {
             if (command.size() == 1) {
                 cout << "Usage: get-file {file-name1} {file-name2} {file-name3}... " << endl;
-                continue;
             }
-
-            commandInput.copy(sendMessage, len);
+            else {
+                commandInput.copy(sendMessage, len);
             int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
             if (errS == -1) {
                 cout << "[Error] Fail to send message to the server." << endl;
             }
             
             int fileNum = command.size() - 1;
-            for (int i = 1; i < command.size(); i++) {
-                ofstream file(command[i]);
-                int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
-                if (errR == -1) {
-                    cout << "[Error] Fail to receive message from the server." << endl;
-                }
-                else {
-                    file << receiveMessage << endl;
+                for (int i = 1; i < command.size(); i++) {
+                    ofstream file(command[i]);
+                    int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
+                    if (errR == -1) {
+                        cout << "[Error] Fail to receive message from the server." << endl;
+                    }
+                    else {
+                        file << receiveMessage << endl;
+                    }
                 }
             }
+
+            
         }    
         else {
             cout << "Usage:" << endl;
