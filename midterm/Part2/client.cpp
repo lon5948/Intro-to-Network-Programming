@@ -81,36 +81,49 @@ int main(int argc, char* argv[]) {
         command = split(commandInput);
         
         if (command[0] == "list-users" || command[0] == "get-ip") {
-            int len = commandInput.length();
-            commandInput.copy(sendMessage, len);
-            int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the server." << endl;
+            if (command.size() != 1 && command[0] == "list-users") {
+                cout << "Usage: list-users" << endl;
             }
-            int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
-            if (errR == -1) {
-                cout << "[Error] Fail to receive message from the server." << endl;
+            else if (command.size() != 1 && command[0] == "get-ip") {
+                cout << "Usage: get-ip" << endl;
             }
             else {
-                cout << receiveMessage << endl;
+                int len = commandInput.length();
+                commandInput.copy(sendMessage, len);
+                int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the server." << endl;
+                }
+                int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
+                if (errR == -1) {
+                    cout << "[Error] Fail to receive message from the server." << endl;
+                }
+                else {
+                    cout << receiveMessage << endl;
+                }
             }
         }
         else if (command[0] == "exit") {
-            int len = commandInput.length();
-            commandInput.copy(sendMessage, len);
-            int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the server." << endl;
-            }
-            int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
-            if (errR == -1) {
-                cout << "[Error] Fail to receive message from the server." << endl;
+            if (command.size() != 1) {
+                cout << "Usage: exit" << endl;
             }
             else {
-                cout << receiveMessage << endl;
-            }
-            close(TCP_socket);
-            return 0; 
+                int len = commandInput.length();
+                commandInput.copy(sendMessage, len);
+                int errS = send(TCP_socket,sendMessage,sizeof(sendMessage),0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the server." << endl;
+                }
+                int errR = recv(TCP_socket, receiveMessage, sizeof(receiveMessage), 0);
+                if (errR == -1) {
+                    cout << "[Error] Fail to receive message from the server." << endl;
+                }
+                else {
+                    cout << receiveMessage << endl;
+                }
+                close(TCP_socket);
+                return 0;
+            } 
         }
         else {
             cout << "Usage:" << endl;

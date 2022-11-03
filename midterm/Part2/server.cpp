@@ -54,27 +54,31 @@ void* Connection(void* data) {
         string sendBack;
 
         if (recVecTCP[0] == "list-users") {
-            if (recVecTCP.size() != 1) {
-                sendBack = "Usage: list-users";
-            }
-            else {
-                map<int, bool>::iterator it;
-                sendBack = "Success:\n";
-                for (it = user.begin(); it != user.end(); it++) {
-                    if (it->second) {
-                        string s = "user" + to_string(it->first) + '\n';
-                        sendBack += s;
-                    }
+            map<int, bool>::iterator it;
+            sendBack = "";
+            for (it = user.begin(); it != user.end(); it++) {
+                if (it->second) {
+                    if (sendBack != "") sendBack += '\n';
+                    string s = "user" + to_string(it->first);
+                    sendBack += s;
                 }
             }
         }
         else if (recVecTCP[0] == "get-ip") {
-            sendBack = "Success:\nIP: ";
+            sendBack = "IP: ";
             sendBack += ipandport;
         }
         else if (recVecTCP[0] == "exit") {
-            sendBack = "Success:\nBye, user" + to_string(num) +".";
+            sendBack = "Bye user" + to_string(num) +".";
             user[num] = false;
+            cout << "user" << to_string(num) << " " << ipandport << " disconnected" << endl;
+            
+            int len = sendBack.length();
+            sendBack.copy(sendMessage, len);
+            int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+            if (errS == -1) {
+                cout << "[Error] Fail to send message to the client." << endl;
+            }
             close(newClient);
             pthread_exit(0);
         }
@@ -165,7 +169,7 @@ int main(int argc, char* argv[]) {
         inp.ipandport = tcpIpandPort;
         inp.num = usernum;
         // welcome
-        string sendBack = "Welcome, you are user" + to_string(usernum) + ".";
+        string sendBack = "Welcome, you are user" + to_string(usernum);
         int len = sendBack.length();
         sendBack.copy(sendMessage, len);
         int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);

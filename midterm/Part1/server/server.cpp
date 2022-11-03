@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
         recVec = split(receiveMessage);
 
         if (recVec[0] == "get-file-list") {
-            string sendBack = "Files: ";
+            string sendBack = "File: ";
             DIR *dp = opendir(".");
             struct dirent *filename;
             while (filename = readdir(dp)) {

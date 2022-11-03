@@ -73,23 +73,28 @@ int main(int argc, char* argv[]) {
         len = commandInput.length();
         
         if (command[0] == "get-file-list") {
-            commandInput.copy(sendMessage, len);
-            int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the server." << endl;
-            }
-            int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
-            if (errR == -1) {
-                cout << "[Error] Fail to receive message from the server." << endl;
+            if (command.size() != 1) {
+                cout << "Usage: get-file-list" << endl;
             }
             else {
-                ans = split(receiveMessage);
-                for (int i = 0; i < ans.size(); i++) {
-                    if (ans[i] != "." && ans[i] != ".."){
-                        cout << ans[i] << " ";
-                    }
+                commandInput.copy(sendMessage, len);
+                int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the server." << endl;
                 }
-                cout << endl;
+                int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
+                if (errR == -1) {
+                    cout << "[Error] Fail to receive message from the server." << endl;
+                }
+                else {
+                    ans = split(receiveMessage);
+                    for (int i = 0; i < ans.size(); i++) {
+                        if (ans[i] != "." && ans[i] != ".."){
+                            cout << ans[i] << " ";
+                        }
+                    }
+                    cout << endl;
+                }
             }
         }
         else if (command[0] == "get-file") {
@@ -98,12 +103,12 @@ int main(int argc, char* argv[]) {
             }
             else {
                 commandInput.copy(sendMessage, len);
-            int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the server." << endl;
-            }
-            
-            int fileNum = command.size() - 1;
+                int errS = sendto(UDP_socket, sendMessage, sizeof(sendMessage), 0, (const struct sockaddr*) &serverAddr, sizeof(serverAddr));
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the server." << endl;
+                }
+                
+                int fileNum = command.size() - 1;
                 for (int i = 1; i < command.size(); i++) {
                     ofstream file(command[i]);
                     int errR = recvfrom(UDP_socket, receiveMessage, sizeof(receiveMessage), 0, (struct sockaddr*) &serverAddr, &serverAddrLen);
@@ -115,9 +120,16 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-
-            
         }    
+        else if (command[0] == "exit") {
+            if (command.size() != 1) {
+                cout << "Usage: exit" << endl;
+            }
+            else {
+                close(UDP_socket);
+                return 0;
+            }
+        }
         else {
             cout << "Usage:" << endl;
             cout << "1. get-file-list" << endl;
