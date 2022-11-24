@@ -19,8 +19,10 @@ using namespace std;
 
 map<string, pair<string, string> > nameMap; // < username , <email,password> >
 map<string, string> emailMap; // < email , username >
-map<string, bool> loginMap; // < username , login >
-map<string, pair<string, vector<string> > > roomMap; // < roomID, pair<invitation code,vector:members' name> >
+map<string, int> loginMap; // < username , login or not >
+map<string, pair<string, vector< pair<string, int> > > > roomMap; // < roomID, pair<invitation code,vector:members' name> >
+map<string, vector< pair<string,string> > > inviteMap; // < username , inviter/roomID >
+map<int, pair<string,string> > curStatus;
 
 vector<string> split(string str) {
     vector<string> result;
@@ -50,7 +52,7 @@ void Register(int UDP_socket, vector<string>recVec, struct sockaddr_in &clientAd
         else {
             nameMap[recVec[1]] = make_pair(recVec[2], recVec[3]);
             emailMap[recVec[2]] = recVec[1];
-            loginMap[recVec[1]] = false;
+            loginMap[recVec[1]] = -1;
             sendBack = "Register Successfully\n";
         }
     }
@@ -71,15 +73,15 @@ void List_Room(int UDP_socket, struct sockaddr_in &clientAddr) {
         sendBack = "No Rooms\n";
     }
     else {
-        map<string, pair<string, vector<string> > >::iterator it;
+        map<string, pair<string, vector< pair<string,int> > > >::iterator it;
         int index = 1;
         string str1 = "";
         string str2 = "";
         for (it = roomMap.begin(); it != roomMap.end(); it++) {
-            if (it->second.second[0] == "0") str1 = ". (Public) Game Room ";
+            if (it->second.second[0].first == "0") str1 = ". (Public) Game Room ";
             else str1 = ". (Private) Game Room ";
 
-            if (it->second.second[0] == "1") str2 = " is open for players\n";
+            if (it->second.second[0].first == "1") str2 = " is open for players\n";
             else str2 = " has started playing\n";
 
             sendBack += to_string(index) + str1 + it->first + str2;
@@ -109,7 +111,7 @@ void List_User(int UDP_socket, struct sockaddr_in &clientAddr) {
         for (it = nameMap.begin(); it != nameMap.end(); it++) {
             string name = it->first;
             string email = "<" + it->second.first + ">";
-            if (loginMap[name] == true) str = " Online";
+            if (loginMap[name] != -1) str = " Online";
             else str = " Offline";
             sendBack += to_string(index) + ".\n" + email + str;
             index++;
@@ -125,10 +127,9 @@ void List_User(int UDP_socket, struct sockaddr_in &clientAddr) {
     }
 }
 
-string Login(int newClient, vector<string> recVecTCP, string user) {
+void Login(int newClient, vector<string> recVecTCP) {
     string sendBack = "";
-    string retuser = user;
-
+    string user = curStatus[newClient].first;
     if (recVecTCP.size() != 3) {
         sendBack = "Usage: login <username> <password>\n";
     }
@@ -141,16 +142,16 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
         else if (user != "") {
             sendBack = "You already logged in as " + user + "\n";
         }
-        else if (loginMap[recVecTCP[1]]) {
+        else if (loginMap[recVecTCP[1]] != -1) {
             sendBack = "Someone already logged in as " + recVecTCP[1] + "\n";
         }
         else if (nameMap[recVecTCP[1]].second != recVecTCP[2]) {
             sendBack = "Wrong password\n";
         }
         else {
-            loginMap[recVecTCP[1]] = true;
+            loginMap[recVecTCP[1]] = newClient;
             sendBack = "Welcome, " + recVecTCP[1] + "\n";
-            retuser = recVecTCP[1];
+            curStatus[newClient].first = recVecTCP[1];
         }
     }
 
@@ -161,14 +162,13 @@ string Login(int newClient, vector<string> recVecTCP, string user) {
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
-    return retuser;
 }
 
-string Logout(int newClient, vector<string>recVecTCP, string user, string room) {
+void Logout(int newClient, vector<string>recVecTCP) {
     char sendMessage[512] = {};
     string sendBack;
-    string retuser = user;
-    string retroom = room;
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
 
     if (recVecTCP.size() != 1) {
         sendBack = "Usage: logout\n";
@@ -176,12 +176,12 @@ string Logout(int newClient, vector<string>recVecTCP, string user, string room) 
     else if (user == "") {
         sendBack = "You are not logged in\n";
     }
-    else if (user == "") {
+    else if (room != "") {
         sendBack = "You are already in game room " + room + ", please leave game room\n";
     }
     else {
-        loginMap[retuser] = false;
-        retuser = "";
+        loginMap[user] = -1;
+        curStatus[newClient].first = "";
         sendBack = "Goodbye, " + user + "\n";
     }
 
@@ -191,18 +191,18 @@ string Logout(int newClient, vector<string>recVecTCP, string user, string room) 
     if (errS == -1) {
         cout << "[Error] Fail to send message from the client." << endl;
     }
-    return retuser, retroom;
 }
 
-string Create_Public_Room(int newClient, vector<string> recVecTCP, string user, string room) {
+void Create_Public_Room(int newClient, vector<string> recVecTCP) {
     string sendBack = "";
-    string retroom = room;
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
 
     if (recVecTCP.size() != 4) {
         sendBack = "Usage: create public room <game room id>\n";
     }
     else {
-        map<string, pair<string, vector<string> > >::iterator it = roomMap.find(recVecTCP[3]);
+        map<string, pair<string, vector< pair<string, int> > > >::iterator it = roomMap.find(recVecTCP[3]);
 
         if (user == "") {
             sendBack = "You are not logged in\n";
@@ -215,11 +215,11 @@ string Create_Public_Room(int newClient, vector<string> recVecTCP, string user, 
         }
         else {
             sendBack = "You create public game room " + recVecTCP[3] + "\n";
-            vector<string> member;
-            member.push_back("0");
-            member.push_back(user);
+            vector< pair<string,int> > member;
+            member.push_back(make_pair("0", 0));
+            member.push_back(make_pair(user, newClient));
             roomMap.insert(make_pair(recVecTCP[3], make_pair("" ,member)));
-            retroom = recVecTCP[3];
+            curStatus[newClient].second = recVecTCP[3];
         }
     }
 
@@ -230,18 +230,18 @@ string Create_Public_Room(int newClient, vector<string> recVecTCP, string user, 
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
-    return retroom;
 }
 
-string Create_Private_Room(int newClient, vector<string> recVecTCP, string user, string room) {
+void Create_Private_Room(int newClient, vector<string> recVecTCP) {
     string sendBack = "";
-    string retroom = room;
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
 
     if (recVecTCP.size() != 5) {
         sendBack = "Usage: create private room <game_room_id> <invitation code>\n";
     }
     else {
-        map<string, pair<string, vector<string> > >::iterator it = roomMap.find(recVecTCP[3]);
+        map<string, pair<string, vector< pair<string,int> > > >::iterator it = roomMap.find(recVecTCP[3]);
 
         if (user == "") {
             sendBack = "You are not logged in\n";
@@ -254,11 +254,11 @@ string Create_Private_Room(int newClient, vector<string> recVecTCP, string user,
         }
         else {
             sendBack = "You create private game room " + recVecTCP[3] + "\n";
-            vector<string> member;
-            member.push_back("0");
-            member.push_back(user);
+            vector< pair<string,int> > member;
+            member.push_back(make_pair("0", 0));
+            member.push_back(make_pair(user, newClient));
             roomMap.insert(make_pair(recVecTCP[3], make_pair(recVecTCP[4] ,member)));
-            retroom = recVecTCP[3];
+            curStatus[newClient].second = recVecTCP[3];
         }
     }
 
@@ -269,7 +269,295 @@ string Create_Private_Room(int newClient, vector<string> recVecTCP, string user,
     if (errS == -1) {
         cout << "[Error] Fail to send message to the client." << endl;
     }
-    return retroom;
+}
+
+void Join_Room(int newClient, vector<string> recVecTCP) {
+    string sendBack = "";
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
+    bool success = false;
+
+    if (recVecTCP.size() != 3) {
+        sendBack = "Usage: join room <game room id>\n";
+    }
+    else {
+        map<string, pair<string, vector< pair<string,int> > > >::iterator it = roomMap.find(recVecTCP[3]);
+
+        if (user == "") {
+            sendBack = "You are not logged in\n";
+        }
+        else if (room != "") {
+            sendBack = "You are already in game room " + room + ", please leave game room\n";
+        }
+        else if (it == roomMap.end()) {
+            sendBack = "Game room " + recVecTCP[2] + " is not exist\n";
+        }
+        else if (it->second.first != "") {
+            sendBack = "Game room is private, please join game by invitation code\n";
+        }
+        else if (it->second.second[0].first == "1") {
+            sendBack = "Game has started, you can't join now\n";
+        }
+        else {
+            sendBack = "You join game room " + recVecTCP[2] + "\n";
+            roomMap[recVecTCP[2]].second.push_back(make_pair(user, newClient));
+            curStatus[newClient].second = recVecTCP[3];
+            success = true;
+        }
+    }
+
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
+    }
+
+    if (success) {
+        for (int i = 1; i < roomMap[recVecTCP[2]].second.size(); i++) {
+            string str = "Welcome, " + user + " to game!\n";
+            int l = str.length();
+            int member_socket = roomMap[recVecTCP[2]].second[i].second;
+            char send_to_other_buffer[l] = {};
+            str.copy(send_to_other_buffer, l);
+            int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+            if (errS == -1) {
+                cout << "[Error] Fail to send message to the client." << endl;
+            }
+        }
+    }
+}
+
+void Invite(int newClient, vector<string> recVecTCP) {
+    string sendBack = "";
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
+    bool success = false;
+    string invitee_name = "";
+    string invitee_email = "";
+    int invitee_status = -1;
+
+    if (recVecTCP.size() != 2) {
+        sendBack = "Usage: invite <invitee email>\n";
+    }
+    else {
+        map<string, pair<string, vector< pair<string,int> > > >::iterator it = roomMap.find(room);
+        invitee_name = emailMap[recVecTCP[1]];
+        invitee_status = loginMap[invitee_name];
+        if (user == "") {
+            sendBack = "You are not logged in\n";
+        }
+        else if (room == "") {
+            sendBack = "You did not join any game room\n";
+        }
+        else if (user != it->second.second[1].first) {
+            sendBack = "You are not private game room manager\n";
+        }
+        else if (invitee_status == -1) {
+            sendBack = "Invitee not logged in\n";
+        }
+        else {
+            map<string, vector< pair<string, string> > >::iterator it = inviteMap.find(invitee_name);
+            if (it != inviteMap.end()) {
+                inviteMap[invitee_name].push_back(make_pair(user, room));
+            }
+            else {
+                vector< pair<string, string> > vec;
+                vec.push_back(make_pair(user, room));
+                inviteMap.insert(make_pair(invitee_name, vec));
+            }
+            invitee_email = "<" + recVecTCP[1] + ">";
+            sendBack = "You send invitation to " + invitee_name + invitee_email + "\n";
+            success = true;
+        }
+    }
+
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
+    }
+
+    if (success) {
+        string inviter_name = user;
+        string inviter_email = "<" + nameMap[user].first + ">";
+        string str = "You receive invitation from " + inviter_name + inviter_email + "\n";
+        int l = str.length();
+        char send_to_other_buffer[l] = {};
+        str.copy(send_to_other_buffer, l);
+        int errS = send(invitee_status, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
+    }
+}
+
+void List_Invitation(int newClient) {
+    string sendBack = "";
+    string user = curStatus[newClient].first;
+
+    if (user == "") {
+        sendBack = "You are not logged in\n";
+    }
+    else {
+        map<string, vector< pair<string,string> > >::iterator it = inviteMap.find(user);
+        if (it == inviteMap.end()){
+            sendBack = "No Invitations\n";
+        }
+        else {
+            for (int i = 0; i < inviteMap[user].size(); i++) {
+                string inviter_name = inviteMap[user][i].first;
+                string inviter_email = "<" + nameMap[inviter_name].first + ">";
+                string roomID = inviteMap[user][i].second;
+                string invitation_code = roomMap[roomID].first;
+                sendBack += to_string(i+1) + ".\n" + inviter_name + inviter_email + \
+                " invite you to join game room " + roomID + ", invitation code is " + \
+                invitation_code + "\n";
+            }
+        }
+    }
+
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
+    }
+}
+
+void Accept(int newClient, vector<string> recVecTCP) {
+    string sendBack = "";
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
+    string rID = "";
+    bool success = false;
+    bool codeERR = false;
+    bool find = false;
+
+    if (recVecTCP.size() != 3) {
+        sendBack = "Usage: accept <inviter email> <invitation code>\n";
+    }
+    else {
+        map<string, pair<string, vector< pair<string, int> > > >::iterator it;
+        string inp_name = emailMap[recVecTCP[1]];
+        for (int i = 0; i < inviteMap[user].size(); ++i) {
+            string roomID = inviteMap[user][i].second;
+            string inviter_name = inviteMap[user][i].first;
+            if (inviter_name == inp_name) {
+                it = roomMap.find(roomID);
+                if (it == roomMap.end()) {
+                    continue;
+                }
+                else if (roomMap[roomID].first != recVecTCP[2]) {
+                    codeERR = true;
+                    find = false;
+                }
+                else {
+                    rID = roomID;
+                    find = true;
+                    break;
+                } 
+            }
+        }
+
+        if (user == "") {
+            sendBack = "You are not logged in\n";
+        }
+        else if (room != "") {
+            sendBack = "You are already in game room " + room + ", please leave game room\n";
+        }
+        else if ((!find && !codeERR)) {
+            sendBack = "Invitation not exist\n";
+        }
+        else if (!find && codeERR) {
+            sendBack = "Invitation code is incorrect\n";
+        }
+        else if (roomMap[rID].second[0].first == "1") {
+            sendBack = "Game has started, you can't join now\n";
+        }
+        else {
+            sendBack = "You join game room " + rID + "\n";
+            roomMap[recVecTCP[2]].second.push_back(make_pair(user, newClient));
+            curStatus[newClient].second = rID;
+            success = true;
+        }
+    }
+
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
+    }
+
+    if (success) {
+        for (int i = 1; i < roomMap[rID].second.size(); i++) {
+            string str = "Welcome, " + user + " to game!\n";
+            int l = str.length();
+            int member_socket = roomMap[rID].second[i].second;
+            char send_to_other_buffer[l] = {};
+            str.copy(send_to_other_buffer, l);
+            int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+            if (errS == -1) {
+                cout << "[Error] Fail to send message to the client." << endl;
+            }
+        }
+    }
+}
+
+void Leave_Room(int newClient) {
+    string sendBack = "";
+    string sb2other = "";
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
+
+    if (user == "") {
+        sendBack = "You are not logged in\n";
+    }
+    else if (room == "") {
+        sendBack = "You did not join any game room\n";
+    }
+    else if (user == roomMap[room].second[1].first) {
+        roomMap.erase(room);
+        sendBack = "You leave game room " + room + "\n";
+        sb2other = "Game room manager leave game room " + room + ", you are forced to leave too\n";
+    }
+    else if (roomMap[room].second[0].first == "1") {
+        roomMap[room].second[0].first == "0";
+        vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
+        roomMap[room].second.erase(it);
+        sendBack = "You leave game room " + room + ", game ends\n";
+        sb2other = user + " leave game room " + room + ", game ends\n";
+    }
+    else {
+        vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
+        roomMap[room].second.erase(it);
+        sendBack = "You leave game room " + room + "n";
+        sb2other = user + " leave game room " + room + "\n";
+    }
+
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
+    }
+
+    if (sb2other != "") {
+        int l = sb2other.length();
+        char send_to_other_buffer[l] = {};
+        sb2other.copy(send_to_other_buffer, len);
+        int errS = send(newClient, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
+    }
 }
 
 bool check4digits(string num) { 
@@ -284,11 +572,12 @@ bool check4digits(string num) {
     return true;
 }
 
-void StartGame(int newClient, vector<string> recVecTCP, string user) {
+void StartGame(int newClient, vector<string> recVecTCP) {
     string sendBack;
     string ans = "";
     char sendMessage[1024] = {};
     char receiveMessage[1024] = {};
+    string user = curStatus[newClient].first; 
 
     if (recVecTCP.size() > 2) {
         sendBack = "Usage: start-game <4-digit number>";
@@ -380,20 +669,12 @@ void StartGame(int newClient, vector<string> recVecTCP, string user) {
     }
 }
 
-void Exit(int newClient, vector<string>recVecTCP, string user) {
+void Exit(int newClient) {
     string sendBack;
     char sendMessage[1024] = {};
 
-    if (recVecTCP.size() != 1) {
-        sendBack = "Usage: exit";
-    }
-    else {
-        if (user != "") {
-            loginMap[user] = false;
-        }
-        close(newClient);
-        pthread_exit(0);
-    }
+    close(newClient);
+    pthread_exit(0);
 
     int len = sendBack.length();
     sendBack.copy(sendMessage, len);
@@ -408,8 +689,7 @@ void* Connection(void* data) {
     int newClient = *((int*) data);
     char receiveMessage[1024] = {};
     vector<string> recVecTCP;
-    string loginUser = "";
-    string curRoom = "";
+    curStatus.insert(make_pair(newClient, make_pair("", "")));
 
     while (1) {
         int errR = recv(newClient, receiveMessage, sizeof(receiveMessage),0);
@@ -421,22 +701,37 @@ void* Connection(void* data) {
         recVecTCP = split(receiveMessage);
 
         if (recVecTCP[0] == "login") {
-            loginUser = Login(newClient, recVecTCP, loginUser);
+            Login(newClient, recVecTCP);
         }
         else if (recVecTCP[0] == "logout") {
-            loginUser, curRoom = Logout(newClient, recVecTCP, loginUser, curRoom);
+            Logout(newClient, recVecTCP);
         }
         else if (recVecTCP[0] == "create" && recVecTCP[1] == "public") {
-            curRoom = Create_Public_Room(newClient, recVecTCP, loginUser, curRoom);
+            Create_Public_Room(newClient, recVecTCP);
         }
         else if (recVecTCP[0] == "create" && recVecTCP[1] == "private") {
-            curRoom = Create_Private_Room(newClient, recVecTCP, loginUser, curRoom);
+            Create_Private_Room(newClient, recVecTCP);
+        }
+        else if (recVecTCP[0] == "join") {
+            Join_Room(newClient, recVecTCP);
+        }
+        else if (recVecTCP[0] == "invite") {
+            Invite(newClient, recVecTCP);
+        }
+        else if (recVecTCP[0] == "list" && recVecTCP[1] == "invitations") {
+            List_Invitation(newClient);
+        }
+        else if (recVecTCP[0] == "accept") {
+            Accept(newClient, recVecTCP);
+        }
+        else if (recVecTCP[0] == "leave") {
+            Leave_Room(newClient);
         }
         else if (recVecTCP[0] == "start-game") {
-            StartGame(newClient, recVecTCP, loginUser);
+            StartGame(newClient, recVecTCP);
         }
         else if (recVecTCP[0] == "exit") {
-            Exit(newClient, recVecTCP, loginUser);
+            Exit(newClient);
         }
         else {
             cout << "[Error] receive command not found." << endl;
