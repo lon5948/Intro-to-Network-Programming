@@ -1,2 +1,2 @@
 all: server.cpp 
-	g++ -o build/server server.cpp -lpthread
+	g++ -o ./build/server server.cpp -lpthread

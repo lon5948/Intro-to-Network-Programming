@@ -6,6 +6,7 @@
 #include <string> 
 #include <sstream>
 #include <algorithm>
+#include <queue>
 #include <unistd.h>  
 #include <sys/types.h>  
 #include <sys/socket.h>  
@@ -15,7 +16,7 @@
 
 using namespace std;
 
-#define MAX_CLIENT 10
+#define MAX_CLIENT 20
 
 map<string, pair<string, string> > nameMap; // < username , <email,password> >
 map<string, string> emailMap; // < email , username >
@@ -72,18 +73,19 @@ void List_Room(int UDP_socket, struct sockaddr_in &clientAddr) {
     string sendBack = "";
 
     if (roomMap.size() == 0) {
-        sendBack = "No Rooms\n";
+        sendBack = "List Game Rooms\nNo Rooms\n";
     }
     else {
+        sendBack = "List Game Rooms\n";
         map<string, pair<string, vector< pair<string,int> > > >::iterator it;
         int index = 1;
         string str1 = "";
         string str2 = "";
         for (it = roomMap.begin(); it != roomMap.end(); it++) {
-            if (it->second.second[0].first == "0") str1 = ". (Public) Game Room ";
+            if (it->second.first == "") str1 = ". (Public) Game Room ";
             else str1 = ". (Private) Game Room ";
 
-            if (it->second.second[0].first == "1") str2 = " is open for players\n";
+            if (it->second.second[0].first == "0") str2 = " is open for players\n";
             else str2 = " has started playing\n";
 
             sendBack += to_string(index) + str1 + it->first + str2;
@@ -104,18 +106,19 @@ void List_User(int UDP_socket, struct sockaddr_in &clientAddr) {
     string sendBack = "";
 
     if (nameMap.size() == 0) {
-        sendBack = "No Users\n";
+        sendBack = "List Users\nNo Users\n";
     }
     else {
+        sendBack = "List Users\n";
         map<string, pair<string, string> >::iterator it;
         int index = 1;
         string str = "";
         for (it = nameMap.begin(); it != nameMap.end(); it++) {
             string name = it->first;
             string email = "<" + it->second.first + ">";
-            if (loginMap[name] != -1) str = " Online";
-            else str = " Offline";
-            sendBack += to_string(index) + ".\n" + email + str;
+            if (loginMap[name] != -1) str = " Online\n";
+            else str = " Offline\n";
+            sendBack += to_string(index) + ". " + name + email + str;
             index++;
         }
     }
@@ -167,7 +170,6 @@ void Login(int newClient, vector<string> recVecTCP) {
 }
 
 void Logout(int newClient, vector<string>recVecTCP) {
-    char sendMessage[512] = {};
     string sendBack;
     string user = curStatus[newClient].first;
     string room = curStatus[newClient].second;
@@ -188,6 +190,7 @@ void Logout(int newClient, vector<string>recVecTCP) {
     }
 
     int len = sendBack.length();
+    char sendMessage[len] = {};
     sendBack.copy(sendMessage, len);
     int errS = send(newClient, sendMessage ,sizeof(sendMessage), 0);
     if (errS == -1) {
@@ -283,7 +286,7 @@ void Join_Room(int newClient, vector<string> recVecTCP) {
         sendBack = "Usage: join room <game room id>\n";
     }
     else {
-        map<string, pair<string, vector< pair<string,int> > > >::iterator it = roomMap.find(recVecTCP[3]);
+        map<string, pair<string, vector< pair<string,int> > > >::iterator it = roomMap.find(recVecTCP[2]);
 
         if (user == "") {
             sendBack = "You are not logged in\n";
@@ -303,7 +306,7 @@ void Join_Room(int newClient, vector<string> recVecTCP) {
         else {
             sendBack = "You join game room " + recVecTCP[2] + "\n";
             roomMap[recVecTCP[2]].second.push_back(make_pair(user, newClient));
-            curStatus[newClient].second = recVecTCP[3];
+            curStatus[newClient].second = recVecTCP[2];
             success = true;
         }
     }
@@ -364,7 +367,10 @@ void Invite(int newClient, vector<string> recVecTCP) {
         else {
             map<string, vector< pair<string, string> > >::iterator it = inviteMap.find(invitee_name);
             if (it != inviteMap.end()) {
-                inviteMap[invitee_name].push_back(make_pair(user, room));
+                vector< pair<string,string> >::iterator vecit = find(inviteMap[invitee_name].begin(), inviteMap[invitee_name].end(), make_pair(user, room));
+                if (vecit == inviteMap[invitee_name].end()) {
+                    inviteMap[invitee_name].push_back(make_pair(user, room));
+                }
             }
             else {
                 vector< pair<string, string> > vec;
@@ -409,18 +415,43 @@ void List_Invitation(int newClient) {
     else {
         map<string, vector< pair<string,string> > >::iterator it = inviteMap.find(user);
         if (it == inviteMap.end()){
-            sendBack = "No Invitations\n";
+            sendBack = "List invitations\nNo Invitations\n";
         }
         else {
-            for (int i = 0; i < inviteMap[user].size(); i++) {
+            sendBack = "List invitations\n";
+            priority_queue< pair<string, string> ,vector< pair<string, string> >,greater< pair<string, string> > >pq;
+            map<string, pair<string, vector< pair<string, int> > > >::iterator it2;
+            int size = inviteMap[user].size();
+            for (int i = 0; i < size; i++) {
                 string inviter_name = inviteMap[user][i].first;
-                string inviter_email = "<" + nameMap[inviter_name].first + ">";
                 string roomID = inviteMap[user][i].second;
+                it2 = roomMap.find(roomID);
+                
+                if (it2 == roomMap.end()) {
+                    vector< pair<string,string> >::iterator vecit = find(inviteMap[user].begin(), inviteMap[user].end(), inviteMap[user][i]);
+                    inviteMap[user].erase(vecit);
+                    size--;
+                    i--;
+                }
+                else {
+                    pq.push(make_pair(roomID, inviter_name));
+                }
+            }
+
+            int index = 1;
+            while (!pq.empty()) {
+                string inviter_name = pq.top().second;
+                string inviter_email = "<" + nameMap[inviter_name].first + ">";
+                string roomID = pq.top().first;
                 string invitation_code = roomMap[roomID].first;
-                sendBack += to_string(i+1) + ".\n" + inviter_name + inviter_email + \
+                sendBack += to_string(index) + ". " + inviter_name + inviter_email + \
                 " invite you to join game room " + roomID + ", invitation code is " + \
                 invitation_code + "\n";
+                index++;
+                pq.pop();
             }
+
+            if (sendBack == "List invitations\n") sendBack = "List invitations\nNo Invitations\n";
         }
     }
 
@@ -478,14 +509,14 @@ void Accept(int newClient, vector<string> recVecTCP) {
             sendBack = "Invitation not exist\n";
         }
         else if (!find && codeERR) {
-            sendBack = "Invitation code is incorrect\n";
+            sendBack = "Your invitation code is incorrect\n";
         }
         else if (roomMap[rID].second[0].first == "1") {
             sendBack = "Game has started, you can't join now\n";
         }
         else {
             sendBack = "You join game room " + rID + "\n";
-            roomMap[recVecTCP[2]].second.push_back(make_pair(user, newClient));
+            roomMap[rID].second.push_back(make_pair(user, newClient));
             curStatus[newClient].second = rID;
             success = true;
         }
@@ -521,6 +552,7 @@ void Leave_Room(int newClient) {
     string sb2other = "";
     string user = curStatus[newClient].first;
     string room = curStatus[newClient].second;
+    bool deleteRoom = false;
 
     if (user == "") {
         sendBack = "You are not logged in\n";
@@ -529,11 +561,11 @@ void Leave_Room(int newClient) {
         sendBack = "You did not join any game room\n";
     }
     else if (user == roomMap[room].second[1].first) {
-        roomMap.erase(room);
         for (int i = 1; i < roomMap[room].second.size(); i++) {
             int c = roomMap[room].second[i].second;
             curStatus[c].second = "";
         }
+        deleteRoom = true;
         sendBack = "You leave game room " + room + "\n";
         sb2other = "Game room manager leave game room " + room + ", you are forced to leave too\n";
     }
@@ -549,7 +581,7 @@ void Leave_Room(int newClient) {
         vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
         roomMap[room].second.erase(it);
         curStatus[newClient].second = "";
-        sendBack = "You leave game room " + room + "n";
+        sendBack = "You leave game room " + room + "\n";
         sb2other = user + " leave game room " + room + "\n";
     }
 
@@ -564,12 +596,18 @@ void Leave_Room(int newClient) {
     if (sb2other != "") {
         int l = sb2other.length();
         char send_to_other_buffer[l] = {};
-        sb2other.copy(send_to_other_buffer, len);
-        int errS = send(newClient, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
-        if (errS == -1) {
-            cout << "[Error] Fail to send message to the client." << endl;
+        sb2other.copy(send_to_other_buffer, l);
+        for (int i=1; i < roomMap[room].second.size(); i++) {
+            if (roomMap[room].second[i].first != user) {
+                int errS = send(roomMap[room].second[i].second, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the client." << endl;
+                }   
+            }
         }
     }
+
+    if (deleteRoom) roomMap.erase(room);
 }
 
 bool check4digits(string num) { 
@@ -617,11 +655,13 @@ void StartGame(int newClient, vector<string> recVecTCP) {
         string str = ss.str();
         answerMap[room] = str;
         guessMap[room] = make_pair(stoi(recVecTCP[2]), 1);
+        roomMap[room].second[0].first = "1";
         success = true;
     }
     else {
         answerMap[room] = recVecTCP[3];
         guessMap[room] = make_pair(stoi(recVecTCP[2]), 1);
+        roomMap[room].second[0].first = "1";
         success = true;
     }
     
@@ -629,7 +669,7 @@ void StartGame(int newClient, vector<string> recVecTCP) {
         string str = "Game start! Current player is " + user + "\n";
         int l = str.length();
         char send_to_other_buffer[l] = {};
-        sendBack.copy(send_to_other_buffer, l);
+        str.copy(send_to_other_buffer, l);
         for (int i = 1; i < roomMap[room].second.size(); i++) {
             int c = roomMap[room].second[i].second;
             int errS = send(c, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
@@ -707,7 +747,7 @@ void Guess(int newClient, vector<string> recVecTCP) {
         sendBack = "Please wait..., current player is " + \
         roomMap[room].second[guessMap[room].second].first + "\n";
     }
-    else if (check4digits(recVecTCP[1])) {
+    else if (!check4digits(recVecTCP[1])) {
         sendBack = "Please enter 4 digit number with leading zero\n";
     }
     else {
@@ -720,11 +760,13 @@ void Guess(int newClient, vector<string> recVecTCP) {
         success = true;
         if (result == "Bingo") {
             send2other = user + " guess '" + recVecTCP[1] + "' and got Bingo!!! " + user + \
-            "Game ends, no one wins\n";
+            " wins the game, game ends\n";
+            roomMap[room].second[0].first = "0";
         }
         else if (guessMap[room].first == 0) {
             send2other = user + " guess '" + recVecTCP[1] + "' and got " + result + "\n" \
-            + user + " wins the game, game ends\n";
+            + "Game ends, no one wins\n";
+            roomMap[room].second[0].first = "0";
         }
         else {
             send2other = user + " guess '" + recVecTCP[1] + "' and got " + result + "\n";
@@ -755,17 +797,16 @@ void Guess(int newClient, vector<string> recVecTCP) {
 }
 
 void Exit(int newClient) {
-    string sendBack = "";
     string user = curStatus[newClient].first;
     string room = curStatus[newClient].second;
 
     if (room != "") {
         if (user == roomMap[room].second[1].first) {
-            roomMap.erase(room);
             for (int i = 1; i < roomMap[room].second.size(); i++) {
                 int c = roomMap[room].second[i].second;
                 curStatus[c].second = "";
             }
+            roomMap.erase(room);
         }
         else {
             vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
@@ -777,7 +818,7 @@ void Exit(int newClient) {
         loginMap[user] = -1;
         curStatus[newClient].first = "";
     }
-    
+
     close(newClient);
     pthread_exit(0);
 }
@@ -794,7 +835,9 @@ void* Connection(void* data) {
             cout << "[Error] Fail to receive message from the client." << endl;
             return 0;
         }
-
+        else if (errR == 0) {
+            Exit(newClient);
+        }
         recVecTCP = split(receiveMessage);
 
         if (recVecTCP[0] == "login") {
@@ -941,7 +984,7 @@ int main(int argc, char* argv[]) {
             else if (recVec[0] == "list" && recVec[1] == "rooms") {
                 List_Room(UDP_socket, clientAddr);
             }
-            else if (recVec[0] == "list" && recVec[1] == "rooms") {
+            else if (recVec[0] == "list" && recVec[1] == "users") {
                 List_User(UDP_socket, clientAddr);
             }
             else {
