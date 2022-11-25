@@ -23,6 +23,8 @@ map<string, int> loginMap; // < username , login or not >
 map<string, pair<string, vector< pair<string, int> > > > roomMap; // < roomID, pair<invitation code,vector:members' name> >
 map<string, vector< pair<string,string> > > inviteMap; // < username , inviter/roomID >
 map<int, pair<string,string> > curStatus;
+map<string, string> answerMap;
+map<string, pair<int, int> > guessMap; // <roomID, rounds/index>
 
 vector<string> split(string str) {
     vector<string> result;
@@ -316,14 +318,16 @@ void Join_Room(int newClient, vector<string> recVecTCP) {
 
     if (success) {
         for (int i = 1; i < roomMap[recVecTCP[2]].second.size(); i++) {
-            string str = "Welcome, " + user + " to game!\n";
-            int l = str.length();
-            int member_socket = roomMap[recVecTCP[2]].second[i].second;
-            char send_to_other_buffer[l] = {};
-            str.copy(send_to_other_buffer, l);
-            int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the client." << endl;
+            if (roomMap[recVecTCP[2]].second[i].first != user) {
+                string str = "Welcome, " + user + " to game!\n";
+                int l = str.length();
+                int member_socket = roomMap[recVecTCP[2]].second[i].second;
+                char send_to_other_buffer[l] = {};
+                str.copy(send_to_other_buffer, l);
+                int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the client." << endl;
+                }
             }
         }
     }
@@ -497,14 +501,16 @@ void Accept(int newClient, vector<string> recVecTCP) {
 
     if (success) {
         for (int i = 1; i < roomMap[rID].second.size(); i++) {
-            string str = "Welcome, " + user + " to game!\n";
-            int l = str.length();
-            int member_socket = roomMap[rID].second[i].second;
-            char send_to_other_buffer[l] = {};
-            str.copy(send_to_other_buffer, l);
-            int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
-            if (errS == -1) {
-                cout << "[Error] Fail to send message to the client." << endl;
+            if (roomMap[rID].second[i].first != user) {
+                string str = "Welcome, " + user + " to game!\n";
+                int l = str.length();
+                int member_socket = roomMap[rID].second[i].second;
+                char send_to_other_buffer[l] = {};
+                str.copy(send_to_other_buffer, l);
+                int errS = send(member_socket, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+                if (errS == -1) {
+                    cout << "[Error] Fail to send message to the client." << endl;
+                }
             }
         }
     }
@@ -524,6 +530,10 @@ void Leave_Room(int newClient) {
     }
     else if (user == roomMap[room].second[1].first) {
         roomMap.erase(room);
+        for (int i = 1; i < roomMap[room].second.size(); i++) {
+            int c = roomMap[room].second[i].second;
+            curStatus[c].second = "";
+        }
         sendBack = "You leave game room " + room + "\n";
         sb2other = "Game room manager leave game room " + room + ", you are forced to leave too\n";
     }
@@ -531,12 +541,14 @@ void Leave_Room(int newClient) {
         roomMap[room].second[0].first == "0";
         vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
         roomMap[room].second.erase(it);
+        curStatus[newClient].second = "";
         sendBack = "You leave game room " + room + ", game ends\n";
         sb2other = user + " leave game room " + room + ", game ends\n";
     }
     else {
         vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
         roomMap[room].second.erase(it);
+        curStatus[newClient].second = "";
         sendBack = "You leave game room " + room + "n";
         sb2other = user + " leave game room " + room + "\n";
     }
@@ -574,115 +586,200 @@ bool check4digits(string num) {
 
 void StartGame(int newClient, vector<string> recVecTCP) {
     string sendBack;
-    string ans = "";
-    char sendMessage[1024] = {};
-    char receiveMessage[1024] = {};
     string user = curStatus[newClient].first; 
+    string room = curStatus[newClient].second;
+    bool success = false;
+    bool guess = false;
 
-    if (recVecTCP.size() > 2) {
-        sendBack = "Usage: start-game <4-digit number>";
+    if (recVecTCP.size() != 3 && recVecTCP.size() != 4) {
+        sendBack = "Usage: start game <number of rounds> <guess number>";
     }
     else if (user == "" ) {
-        sendBack = "Please login first.";
+        sendBack = "You are not logged in\n";
     }
-    else if (recVecTCP.size() == 2) {
-        ans = recVecTCP[1];
-        bool check = check4digits(ans);
-        if (!check) {
-            sendBack = "Usage: start-game <4-digit number>";
-            ans = "";
-        }
-        else {
-            sendBack = "Please typing a 4-digit number:";
-        }
+    else if (room == "") {
+        sendBack = "You did not join any game room\n";
     }
-    else if (recVecTCP.size() == 1) {
+    else if (roomMap[room].second[1].first != user) {
+        sendBack = "You are not game room manager, you can't start game\n";
+    }
+    else if (roomMap[room].second[0].first == "1") {
+        sendBack = "Game has started, you can't start again\n";
+    }
+    else if (recVecTCP.size() == 4 && !check4digits(recVecTCP[3])) {
+        sendBack = "Please enter 4 digit number with leading zero\n";
+    }
+    else if (recVecTCP.size() == 3){
         srand(time(NULL));
         int randomAnswer = rand() % 10000;
         stringstream ss;
         ss << randomAnswer;
         string str = ss.str();
-        ans = str;
-        sendBack = "Please typing a 4-digit number:";
+        answerMap[room] = str;
+        guessMap[room] = make_pair(stoi(recVecTCP[2]), 1);
+        success = true;
+    }
+    else {
+        answerMap[room] = recVecTCP[3];
+        guessMap[room] = make_pair(stoi(recVecTCP[2]), 1);
+        success = true;
     }
     
-    int len = sendBack.length();
-    sendBack.copy(sendMessage, len);
-    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
-    if (errS == -1) {
-        cout << "[Error] Fail to send message to the client." << endl;
-    }
-
-    if (ans != "") {
-        string input;
-        int chance = 5;
-        
-        while (chance > 0) {
-            int Anum=0, Bnum=0;
-            memset(&sendMessage, '\0', sizeof(sendMessage));
-            memset(&receiveMessage, '\0', sizeof(receiveMessage));
-            vector<int> vecInput(10,0);
-            vector<int> vecAns(10,0);
-
-            int errR = recv(newClient, receiveMessage, sizeof(receiveMessage), 0);
-            if (errR == -1) {
-                cout << "[Error] Fail to receive message from the client." << endl;
-            }
-
-            input = receiveMessage;
-            bool check = check4digits(input);
-            if (!check) {
-                sendBack = "Your guess should be a 4-digit number.";
-            }
-            else if (input == ans) {
-                sendBack = "You got the answer!";
-                chance = 0;
-            }
-            else {
-                for (int i = 0; i < 4; i++) { 
-                    if (input[i] == ans[i]) {
-                        Anum++;
-                    }
-                    else {
-                        vecInput[int(input[i])-int('0')] += 1;
-                        vecAns[int(ans[i])-int('0')] += 1;
-                    }
-                }
-                for (int i = 0; i < 10; i++) { 
-                    if (vecInput[i] > 0 && vecAns[i] > 0) {
-                        Bnum += min(vecInput[i], vecAns[i]);
-                    }
-                }
-                sendBack = to_string(Anum) + "A" + to_string(Bnum) + "B";
-                if ((--chance) == 0) {
-                    sendBack += "\nYou lose the game!";
-                } 
-            }
-
-            int len = sendBack.length();
-            sendBack.copy(sendMessage, len);
-            int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (success) {
+        string str = "Game start! Current player is " + user + "\n";
+        int l = str.length();
+        char send_to_other_buffer[l] = {};
+        sendBack.copy(send_to_other_buffer, l);
+        for (int i = 1; i < roomMap[room].second.size(); i++) {
+            int c = roomMap[room].second[i].second;
+            int errS = send(c, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
             if (errS == -1) {
                 cout << "[Error] Fail to send message to the client." << endl;
             }
         }
     }
+    else {
+        int len = sendBack.length();
+        char sendMessage[len] = {};
+        sendBack.copy(sendMessage, len);
+        int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
+    }
+}
+
+string GuessResult(string guess, string rID) {
+    string ret = "";
+    int Anum=0, Bnum=0;
+    vector<int> vecInput(10,0);
+    vector<int> vecAns(10,0);
+
+    if (guess == answerMap[rID]) {
+        ret = "Bingo";
+    }
+    else {
+        for (int i = 0; i < 4; i++) { 
+            if (guess[i] == answerMap[rID][i]) {
+                Anum++;
+            }
+            else {
+                vecInput[int(guess[i])-int('0')] += 1;
+                vecAns[int(answerMap[rID][i])-int('0')] += 1;
+            }
+        }
+        for (int i = 0; i < 10; i++) { 
+            if (vecInput[i] > 0 && vecAns[i] > 0) {
+                Bnum += min(vecInput[i], vecAns[i]);
+            }
+        }
+        ret = "'" + to_string(Anum) + "A" + to_string(Bnum) + "B'";
+    }
+    return ret;
+}
+
+void Guess(int newClient, vector<string> recVecTCP) {
+    string sendBack = "";
+    string send2other = "";
+    string user = curStatus[newClient].first; 
+    string room = curStatus[newClient].second;
+    bool success = false;
+    bool guess = false;
+
+    if (recVecTCP.size() != 2) {
+        sendBack = "Usage: guess <guess number>\n";
+    }
+    else if (user == "" ) {
+        sendBack = "You are not logged in\n";
+    }
+    else if (room == "") {
+        sendBack = "You did not join any game room\n";
+    }
+    else if (roomMap[room].second[0].first == "0") {
+        if (roomMap[room].second[1].first == user) {
+            sendBack = "You are game room manager, please start game first\n";
+        }
+        else {
+            sendBack = "Game has not started yet\n";
+        }
+    }
+    else if (user != roomMap[room].second[guessMap[room].second].first) {
+        sendBack = "Please wait..., current player is " + \
+        roomMap[room].second[guessMap[room].second].first + "\n";
+    }
+    else if (check4digits(recVecTCP[1])) {
+        sendBack = "Please enter 4 digit number with leading zero\n";
+    }
+    else {
+        string result = GuessResult(recVecTCP[1] ,room);
+        guessMap[room].second++;
+        if (guessMap[room].second == roomMap[room].second.size()) {
+            guessMap[room].second = 1;
+            guessMap[room].first--;
+        }
+        success = true;
+        if (result == "Bingo") {
+            send2other = user + " guess '" + recVecTCP[1] + "' and got Bingo!!! " + user + \
+            "Game ends, no one wins\n";
+        }
+        else if (guessMap[room].first == 0) {
+            send2other = user + " guess '" + recVecTCP[1] + "' and got " + result + "\n" \
+            + user + " wins the game, game ends\n";
+        }
+        else {
+            send2other = user + " guess '" + recVecTCP[1] + "' and got " + result + "\n";
+        }
+    }
+    
+    if (success) {
+        int l = send2other.length();
+        char send_to_other_buffer[l] = {};
+        send2other.copy(send_to_other_buffer, l);
+        for (int i = 1; i < roomMap[room].second.size(); i++) {
+            int c = roomMap[room].second[i].second;
+            int errS = send(c, send_to_other_buffer, sizeof(send_to_other_buffer), 0);
+            if (errS == -1) {
+                cout << "[Error] Fail to send message to the client." << endl;
+            }
+        }
+    }
+    else {
+        int len = sendBack.length();
+        char sendMessage[len] = {};
+        sendBack.copy(sendMessage, len);
+        int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+        if (errS == -1) {
+            cout << "[Error] Fail to send message to the client." << endl;
+        }
+    }
 }
 
 void Exit(int newClient) {
-    string sendBack;
-    char sendMessage[1024] = {};
+    string sendBack = "";
+    string user = curStatus[newClient].first;
+    string room = curStatus[newClient].second;
 
+    if (room != "") {
+        if (user == roomMap[room].second[1].first) {
+            roomMap.erase(room);
+            for (int i = 1; i < roomMap[room].second.size(); i++) {
+                int c = roomMap[room].second[i].second;
+                curStatus[c].second = "";
+            }
+        }
+        else {
+            vector< pair<string,int> >::iterator it = find(roomMap[room].second.begin(), roomMap[room].second.end(), make_pair(user, newClient));
+            roomMap[room].second.erase(it);
+            curStatus[newClient].second = "";
+        }
+    }
+    if (user != "") {
+        loginMap[user] = -1;
+        curStatus[newClient].first = "";
+    }
+    
     close(newClient);
     pthread_exit(0);
-
-    int len = sendBack.length();
-    sendBack.copy(sendMessage, len);
-
-    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
-    if (errS == -1) {
-        cout << "[Error] Fail to send message from the client." << endl;
-    }
 }
 
 void* Connection(void* data) {
@@ -727,8 +824,11 @@ void* Connection(void* data) {
         else if (recVecTCP[0] == "leave") {
             Leave_Room(newClient);
         }
-        else if (recVecTCP[0] == "start-game") {
+        else if (recVecTCP[0] == "start") {
             StartGame(newClient, recVecTCP);
+        }
+        else if (recVecTCP[0] == "guess") {
+            Guess(newClient, recVecTCP);
         }
         else if (recVecTCP[0] == "exit") {
             Exit(newClient);
