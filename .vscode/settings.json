@@ -1,5 +1,17 @@
 {
     "files.associations": {
-        "vector": "cpp"
+        "vector": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "string": "cpp",
+        "map": "cpp",
+        "fstream": "cpp",
+        "iostream": "cpp",
+        "xtree": "cpp",
+        "deque": "cpp",
+        "xutility": "cpp",
+        "ostream": "cpp",
+        "iosfwd": "cpp",
+        "xlocale": "cpp"
     }
 }
