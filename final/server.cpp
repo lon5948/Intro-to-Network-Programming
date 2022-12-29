@@ -97,16 +97,16 @@ void Tell(int newClient, vector<string> recVecTCP) {
     int usernum = newClient2user[newClient];
     string sendBack = "";
     string receiver = recVecTCP[1];
-    int receiver_num = stoi(receiver.erase(0,4));
+    int receiver_num = -1;
+    bool stoi_flag = true;
+    if (receiver.size() > 4) {
+        for (int i = 4; i < receiver.size(); i++) {
+            if (receiver[i] < int('0') || receiver[i] > int('9')) stoi_flag = false;
+        }
+        if (stoi_flag) receiver_num = stoi(receiver.erase(0,4));
+    }
     if (find(allusers.begin(), allusers.end(), user2newClient[receiver_num]) == allusers.end()) {
         sendBack = recVecTCP[1] + " does not exist.";
-        int len = sendBack.length();
-        char sendMessage[len] = {};
-        sendBack.copy(sendMessage, len);
-        int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
-        if (errS == -1) {
-            cout << "[Error] Fail to send message to the client." << endl;
-        }
     }
     else if (usernum != receiver_num){
         sendBack = "user" + to_string(usernum) + " told you:";
@@ -114,15 +114,29 @@ void Tell(int newClient, vector<string> recVecTCP) {
             sendBack += " ";
             sendBack += recVecTCP[i];
         }
-        int len = sendBack.length();
-        char sendMessage[len] = {};
-        sendBack.copy(sendMessage, len);
         if (mute_vec[receiver_num] == false) {
+            int len = sendBack.length();
+            char sendMessage[len] = {};
+            sendBack.copy(sendMessage, len);
             int errS = send(user2newClient[receiver_num], sendMessage, sizeof(sendMessage), 0);
             if (errS == -1) {
                 cout << "[Error] Fail to send message to the client." << endl;
             }
+            return;
         }
+        else {
+            sendBack = "User is in mute mode.";
+        }
+    }
+    else {
+        sendBack = "You can't send message to yourself.";
+    }
+    int len = sendBack.length();
+    char sendMessage[len] = {};
+    sendBack.copy(sendMessage, len);
+    int errS = send(newClient, sendMessage, sizeof(sendMessage), 0);
+    if (errS == -1) {
+        cout << "[Error] Fail to send message to the client." << endl;
     }
 }
 

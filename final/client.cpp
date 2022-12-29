@@ -83,12 +83,15 @@ int main(int argc, char* argv[]) {
     string commandInput = "";
     vector<string> command;
 
-    cout << "******************************" << endl;
-    cout << "* Welcome to the BBS server. *" << endl;
-    cout << "******************************" << endl;
+    cout << "**************************" << endl;
+    cout << "*Welcome to the BBS server.*" << endl;
+    cout << "**************************" << endl;
 
     pthread_t pid;
-    pthread_create(&pid, NULL, Receive_Message, (void* )&TCP_socket);
+    if (pthread_create(&pid, NULL, Receive_Message, (void* )&TCP_socket) < 0) {
+        perror("error: ");
+        exit(1);
+    }
 
     while (getline(cin, commandInput)) {
         command = split(commandInput);
@@ -97,6 +100,16 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         else {
+            if (command[0] == "mute" && command.size() != 1) 
+                cout << "Usage: mute" << endl;
+            else if (command[0] == "unmute" && command.size() != 1) 
+                cout << "Usage: unmute" << endl;
+            else if (command[0] == "yell" && command.size() < 2) 
+                cout << "Usage: yell <message>" << endl;
+            else if (command[0] == "tell" && command.size() < 3) 
+                cout << "Usage: tell <receiver> <message>" << endl;
+            else if (command[0] != "mute" && command[0] == "unmute" && command[0] == "yell" && command[0] == "tell" && command[0] == "exit") 
+                cout << "Usage:\n1 . mute\n2. unmute\n3. yell <message>\n4. tell <receiver> <message>" << endl;   
             int len = commandInput.length();
             char sendMessage[1024] = {};
             commandInput.copy(sendMessage, len);
