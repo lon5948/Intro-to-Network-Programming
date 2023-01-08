@@ -7,3 +7,6 @@ NYCU 111 上 / professor: 袁賢銘
 
 ### hw2
 - implement multiplayer 1A2B game server
+
+### hw3
+- use AWS services to design multi-server for 1A2B game. 
